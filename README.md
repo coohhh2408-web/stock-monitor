@@ -92,11 +92,29 @@ npm run ios:open     # 用 Xcode 打开工程
 npm run ios:run      # 构建 + 启动 iPhone 17 模拟器
 ```
 
-### 日常开发
+### 日常开发（热加载，推荐）
+
+一条命令拉起模拟器；没有 Vite 时会自动在后台启动：
+
+```bash
+npm run ios:local    # 模拟器 → http://127.0.0.1:5173
+npm run ios:device   # 真机（同一 Wi-Fi）→ 局域网 IP，再在 Xcode 里选手机 Run
+```
+
+改 `src/` 保存即可在 App 里看到，不必每次重编原生。
+
+也可以手动开两个终端：
 
 ```bash
 npm run dev          # Web 热更新调试
-npm run ios:build    # 改完代码后同步到 iOS
+CAP_SERVER_URL=http://127.0.0.1:5173 npm run ios:live   # 另开终端，sync 后打开 Xcode
+```
+
+### 打包进 App（离线包 / 提测）
+
+```bash
+npm run ios:build    # vite build + cap sync，不带 CAP_SERVER_URL
+npm run ios:open     # 或 npm run ios:run 直接启动模拟器
 ```
 
 ### iOS 特性
