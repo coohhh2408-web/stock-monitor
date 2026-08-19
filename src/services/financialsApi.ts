@@ -1,9 +1,6 @@
+import { usesDevProxy } from '@/lib/devProxy'
 import { formatListedCode } from '@/lib/utils'
 import type { FinancialPeriod, FinancialsPack, QuoteItem } from '@/types/market'
-
-function usesDevProxy(): boolean {
-  return typeof window !== 'undefined' && window.location.port === '5173'
-}
 
 function num(value: unknown): number | null {
   if (value === null || value === undefined || value === '' || value === '-' || value === '--') return null

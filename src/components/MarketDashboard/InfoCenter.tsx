@@ -32,16 +32,18 @@ export function InfoCenter({
 
     const load = async () => {
       try {
-        const [watch, live] = await Promise.all([
+        const [watch, live] = await Promise.allSettled([
           fetchWatchlistNews(quotes),
           fetchFlashNews(quotes),
         ])
         if (cancelled) return
-        setWatchlist(watch.slice(0, 12))
-        setFlash(live.slice(0, 16))
-        setUpdatedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
-      } catch {
-        if (!cancelled) setFlash([])
+        if (watch.status === 'fulfilled') setWatchlist(watch.value.slice(0, 12))
+        if (live.status === 'fulfilled') {
+          setFlash(live.value.slice(0, 16))
+          if (live.value.length > 0) {
+            setUpdatedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
