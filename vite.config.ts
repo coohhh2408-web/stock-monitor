@@ -11,6 +11,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    allowedHosts: true,
     proxy: {
       '/em-qt': {
         target: 'https://push2.eastmoney.com',
