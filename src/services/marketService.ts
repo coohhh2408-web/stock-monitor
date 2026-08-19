@@ -1,3 +1,4 @@
+import { buildBuffettMungerBrief } from '@/services/buffettMunger'
 import type { QuoteItem, SparklineDataPoint, AIDiagnosisStub } from '@/types/market'
 
 export function generateSparkline(basePrice: number, seed = 0, points = 48): SparklineDataPoint[] {
@@ -122,14 +123,19 @@ const DIAGNOSIS_TEMPLATES: Record<string, Partial<AIDiagnosisStub>> = {
 export async function generateAIDiagnosis(stock: QuoteItem): Promise<AIDiagnosisStub> {
   await new Promise((r) => setTimeout(r, 1800 + Math.random() * 800))
   const template = DIAGNOSIS_TEMPLATES[stock.code] ?? DIAGNOSIS_TEMPLATES.default
+  const sage = buildBuffettMungerBrief(stock)
+  const direction = stock.change >= 0 ? '上涨' : '下跌'
+  const defaultAnomaly =
+    template === DIAGNOSIS_TEMPLATES.default
+      ? `今日${direction} ${Math.abs(stock.changePercent).toFixed(2)}%。近期波动处于正常观察区间，建议结合成交量与板块联动，等待更清晰的方向确认。`
+      : template.anomalySummary
   return {
     status: 'ready',
     moatAnalysis: template.moatAnalysis,
     roeDuPont: template.roeDuPont,
-    anomalySummary: template.anomalySummary?.replace(
-      '今日',
-      stock.change >= 0 ? '今日' : '今日',
-    ),
+    anomalySummary: defaultAnomaly,
+    buffettSummary: sage.buffett.summary,
+    mungerSummary: sage.munger.summary,
   }
 }
 

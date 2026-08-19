@@ -57,6 +57,8 @@ export interface AIDiagnosisStub {
   moatAnalysis?: string
   roeDuPont?: string
   anomalySummary?: string
+  buffettSummary?: string
+  mungerSummary?: string
 }
 
 export interface AnnouncementItem {
