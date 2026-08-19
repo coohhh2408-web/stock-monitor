@@ -12,6 +12,8 @@
     "ios:open": "npx cap open ios",
     "ios:run": "npm run ios:build && npx cap run ios",
     "ios:live": "npx cap sync ios && npx cap open ios",
+    "ios:local": "node scripts/local-ios.mjs",
+    "ios:device": "node scripts/local-ios.mjs --device",
     "cap:sync": "npx cap sync",
     "setup:supabase": "bash scripts/setup-supabase.sh",
     "setup:env": "node scripts/write-env.mjs",

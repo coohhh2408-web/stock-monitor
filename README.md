@@ -2,6 +2,29 @@
 
 Apple Stocks 风格的个人股票行情监控 — **Web + iOS 原生**双端。
 
+## 现在请在 Mac 本机开发
+
+云环境没有 Xcode，iOS 必须在本地跑。拉带网页最新改动的分支：
+
+```bash
+git fetch origin
+git checkout cursor/ios-native-shell-6f09
+git pull origin cursor/ios-native-shell-6f09
+npm install
+```
+
+两个终端：
+
+```bash
+npm run dev          # 终端 1：网页 + 代理，保持开着
+npm run ios:local    # 终端 2：模拟器热加载（127.0.0.1:5173），然后 Xcode Run
+```
+
+iPhone 真机（和 Mac 同一 Wi-Fi）：先 `npm run dev`，再 `npm run ios:device`。
+
+改 `src/` 保存即可在 App 里看到。不要在 Swift 里复制行情 / 清单 / 财报。网页功能还没做完，原生只留壳。
+
+
 ## 真实行情（可直接给别人用）
 
 打开网页即可，**不需要注册、不需要自建后端**。
