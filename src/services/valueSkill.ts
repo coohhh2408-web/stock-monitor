@@ -1,6 +1,7 @@
 import { inferBusinessKind, type BusinessKind } from '@/services/buffettMunger'
+import { cashConversion } from '@/services/financialsApi'
 import { getStockPe } from '@/services/sagePlan'
-import type { QuoteItem } from '@/types/market'
+import type { FinancialPeriod, QuoteItem } from '@/types/market'
 
 export type GateAnswer = 'yes' | 'no' | 'unknown'
 export type InfoRichness = 'B' | 'C'
@@ -252,7 +253,12 @@ const GATES_META: { id: number; dimension: string; question: string }[] = [
   { id: 8, dimension: '价格', question: '现价是否进入该生意类型的习惯买点带？' },
 ]
 
-export function runValueSkill(stock: QuoteItem, kindLabel: string, inBand: boolean | null): ValueSkillRun {
+export function runValueSkill(
+  stock: QuoteItem,
+  kindLabel: string,
+  inBand: boolean | null,
+  financials?: FinancialPeriod | null,
+): ValueSkillRun {
   const kind = inferBusinessKind(stock)
   const known = matchKnownQual(stock)
   const peNow = getStockPe(stock)
@@ -267,9 +273,9 @@ export function runValueSkill(stock: QuoteItem, kindLabel: string, inBand: boole
   const q4 = known
     ? pack(4, known.pricePower, known.pricePowerNote)
     : pack(4, 'unknown', '没有提价记录。')
-  const q5 = pack(5, 'unknown', '盘口没有现金流，不算赚钱质量。')
-  const q6 = pack(6, 'unknown', '盘口没有负债，不做最差情景。')
-  const q7 = pack(7, 'unknown', '没有治理或诚信记录。未知不能当成否决。')
+  const q5 = gateCash(financials)
+  const q6 = gateDebt(kind, financials)
+  const q7 = pack(7, 'unknown', '没有年报原文或电话会，不判断管理层是否直面问题。')
   const q8 = gatePrice(peNow, inBand, kind)
 
   const gates = [q1, q2, q3, q4, q5, q6, q7, q8]
@@ -279,7 +285,7 @@ export function runValueSkill(stock: QuoteItem, kindLabel: string, inBand: boole
   const qualityNoCount = gates.filter((g) => g.id <= 7 && g.answer === 'no').length
   const integrityFail = q7.answer === 'no'
 
-  const richness: InfoRichness = known && peNow !== null ? 'B' : 'C'
+  const richness: InfoRichness = financials || known ? 'B' : 'C'
   let filter: SkillFilter = 'price-only'
   let filterNote = `未知 ${unknownCount} 项。本页只能算习惯买点，不能当研究结论。`
 
@@ -288,9 +294,11 @@ export function runValueSkill(stock: QuoteItem, kindLabel: string, inBand: boole
     filterNote = integrityFail
       ? '管理层关未过关，一票否决。'
       : '这不是可以按企业清单定价的标的，或不满足质量关。'
-  } else if (unknownCount < 4 && known) {
+  } else if (unknownCount < 4 && (known || financials)) {
     filter = 'continue'
-    filterNote = '质量关仍有未知。内置说明可以辅助理解，不能代替年报。'
+    filterNote = financials
+      ? `已同步 ${financials.reportName}。内置说明不能代替年报原文。`
+      : '质量关仍有未知。内置说明可以辅助理解，不能代替年报。'
   }
 
   return {
@@ -303,12 +311,9 @@ export function runValueSkill(stock: QuoteItem, kindLabel: string, inBand: boole
     qualityNoCount,
     gates,
     knownProfile: Boolean(known),
-    nextDataNeeded: [
-      '年报或交易所披露的自由现金流',
-      '负债与利息保障',
-      '管理层诚信与资本配置记录',
-      '第二独立数据源（信息级才能到 A）',
-    ],
+    nextDataNeeded: financials
+      ? ['年报原文与 MD&A', '利息覆盖倍数', '第二独立数据源（信息级才能到 A）']
+      : ['最新报告期经营现金流', '资产负债率与流动比率', '年报原文', '第二独立数据源'],
   }
 }
 
@@ -316,6 +321,42 @@ export function answerLabel(answer: GateAnswer): string {
   if (answer === 'yes') return '成立'
   if (answer === 'no') return '未过关'
   return '未知'
+}
+
+function gateCash(period: FinancialPeriod | null | undefined): SkillGate {
+  if (!period) return pack(5, 'unknown', '还没同步到最新报告期的现金流。')
+  const conversion = cashConversion(period)
+  if (conversion === null) {
+    return pack(5, 'unknown', `${period.reportName}里对不上经营现金流和净利，不算赚钱质量。`)
+  }
+  const note = `${period.reportName}：经营现金流约为净利的 ${(conversion * 100).toFixed(0)}%。`
+  if (conversion >= 0.8) return pack(5, 'yes', `${note}利润大体能变成现金。`)
+  if (conversion < 0.5) return pack(5, 'no', `${note}账面利润不能直接当业主收益。`)
+  return pack(5, 'no', `${note}变现偏弱，先当红旗。`)
+}
+
+function gateDebt(kind: BusinessKind, period: FinancialPeriod | null | undefined): SkillGate {
+  if (!period) return pack(6, 'unknown', '还没同步到最新报告期的负债。')
+  if (kind === 'bank' || kind === 'insurance') {
+    return pack(6, 'unknown', '金融股负债结构不能按普通企业的资产负债率硬套。')
+  }
+  const debt = period.debtRatio
+  const current = period.currentRatio
+  if (debt === null && current === null) {
+    return pack(6, 'unknown', `${period.reportName}没有可用的杠杆数据。`)
+  }
+  const bits = [
+    debt !== null ? `资产负债率 ${debt.toFixed(0)}%` : null,
+    current !== null ? `流动比率 ${current.toFixed(2)}` : null,
+  ].filter(Boolean)
+  const prefix = `${period.reportName}：${bits.join('，')}。`
+  if ((debt !== null && debt >= 70) || (current !== null && current < 1)) {
+    return pack(6, 'no', `${prefix}最差情景下缓冲不够。`)
+  }
+  if (debt !== null && debt <= 45 && (current === null || current >= 1.5)) {
+    return pack(6, 'yes', `${prefix}杠杆不算激进，仍缺利息覆盖。`)
+  }
+  return pack(6, 'unknown', `${prefix}杠杆中等，没有利息覆盖就不做最差情景。`)
 }
 
 function gateCircle(kind: BusinessKind, known: QualNotes | null, kindLabel: string): SkillGate {

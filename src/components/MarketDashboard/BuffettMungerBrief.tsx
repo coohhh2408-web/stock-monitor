@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { cn, formatQuotePrice } from '@/lib/utils'
-import { buildBuffettMungerBrief, stanceLabel, type SageTake, type ValueStance } from '@/services/buffettMunger'
+import { buildBuffettMungerBrief, inferBusinessKind, stanceLabel, type SageTake, type ValueStance } from '@/services/buffettMunger'
 import {
   buildSkillBrief,
   checklistLabels,
@@ -19,30 +19,43 @@ import {
   type ValueChecklist,
 } from '@/services/valueChecklist'
 import { answerLabel, type GateAnswer, type InfoRichness } from '@/services/valueSkill'
-import type { QuoteItem } from '@/types/market'
+import { buildEarningsBrief, type EarningsBrief } from '@/services/earningsBrief'
+import type { FinancialsPack, QuoteItem } from '@/types/market'
 
-type SageView = 'list' | 'research'
+type SageView = 'list' | 'earnings' | 'research'
 type SageTone = 'buffett' | 'munger' | 'duan'
 type ResearchView = 'prose' | 'skill'
+type FinStatus = 'loading' | 'ready' | 'empty'
 
-export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
+export function BuffettMungerBrief({
+  stock,
+  financials = null,
+  financialsStatus = 'empty',
+}: {
+  stock: QuoteItem
+  financials?: FinancialsPack | null
+  financialsStatus?: FinStatus
+}) {
   const [view, setView] = useState<SageView>('list')
   const [research, setResearch] = useState<ResearchView>('prose')
-  const checklist = buildValueChecklist(stock)
+  const checklist = buildValueChecklist(stock, financials?.latest)
   const prose = view === 'research' ? buildBuffettMungerBrief(stock) : null
   const skill = view === 'research' ? buildSkillBrief(stock) : null
+  const earnings =
+    view === 'earnings' && financials ? buildEarningsBrief(stock.name, inferBusinessKind(stock), financials) : null
 
   return (
     <section className="mb-4">
       <div className="flex items-end justify-between gap-3 mb-2.5">
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-neutral-800">价值清单</p>
-          <p className="text-[11px] text-neutral-400 mt-0.5">按咱们自己的 skill 算买点，不扮演大师</p>
+          <p className="text-[11px] text-neutral-400 mt-0.5">买点用盘口，质量关用最新财报</p>
         </div>
       </div>
       <SegmentedControl
         options={[
           { value: 'list' as const, label: '清单' },
+          { value: 'earnings' as const, label: '财报' },
           { value: 'research' as const, label: '研究对照' },
         ]}
         value={view}
@@ -52,6 +65,14 @@ export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
       />
 
       {view === 'list' && <ChecklistCard brief={checklist} stock={stock} />}
+      {view === 'earnings' && (
+        <EarningsCard
+          stock={stock}
+          brief={earnings}
+          status={financialsStatus}
+          pack={financials}
+        />
+      )}
 
       {view === 'research' && prose && skill && (
         <>
@@ -213,6 +234,79 @@ function GateDot({ state }: { state: GateState }) {
           ? 'bg-neutral-400'
           : 'bg-neutral-200'
   return <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', color)} />
+}
+
+function EarningsCard({
+  stock,
+  brief,
+  status,
+  pack,
+}: {
+  stock: QuoteItem
+  brief: EarningsBrief | null
+  status: FinStatus
+  pack: FinancialsPack | null
+}) {
+  if (status === 'loading') {
+    return (
+      <article className="rounded-2xl border border-black/[0.06] bg-white px-4 py-8 text-center">
+        <p className="text-[13px] text-neutral-500">正在同步最新报告期…</p>
+      </article>
+    )
+  }
+  if (stock.market === 'us-stock') {
+    return (
+      <article className="rounded-2xl border border-black/[0.06] bg-white px-4 py-6">
+        <p className="text-[14px] font-semibold text-neutral-800">美股财报还没接到同一路 F10</p>
+        <p className="text-[13px] text-neutral-500 mt-2 leading-relaxed">
+          缺数就标未知，不拿盘口编经营现金流。A 股和港股打开后会同步最新年报/半年报/季报。
+        </p>
+      </article>
+    )
+  }
+  if (stock.market === 'futures' || !brief || !pack) {
+    return (
+      <article className="rounded-2xl border border-black/[0.06] bg-white px-4 py-6">
+        <p className="text-[14px] font-semibold text-neutral-800">这一期财报还没拉到</p>
+        <p className="text-[13px] text-neutral-500 mt-2 leading-relaxed">
+          东方财富 F10 没有可用的主要指标时，不解读。未知不能填成结论。
+        </p>
+      </article>
+    )
+  }
+  return (
+    <article className="rounded-2xl border border-black/[0.06] bg-white overflow-hidden">
+      <div className="px-4 py-3.5">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <p className="text-[16px] font-semibold text-neutral-900 leading-snug">{brief.headline}</p>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 shrink-0">
+            {brief.periodLabel.split(' · ')[0]}
+          </span>
+        </div>
+        <p className="text-[12px] text-neutral-400">{brief.periodLabel}</p>
+      </div>
+      <div className="px-4 py-3 bg-neutral-50/80 border-y border-neutral-100 grid grid-cols-2 gap-x-3 gap-y-2">
+        {brief.metrics.map((item) => (
+          <div key={item.label} className="min-w-0">
+            <p className="text-[10px] text-neutral-400">{item.label}</p>
+            <p className="text-[13px] font-medium tabular text-neutral-800 truncate">{item.value}</p>
+          </div>
+        ))}
+      </div>
+      <ul className="divide-y divide-neutral-100">
+        {brief.lenses.map((item) => (
+          <li key={item.author} className="px-4 py-3">
+            <p className="text-[13px] font-semibold text-neutral-800">{item.author}</p>
+            <p className="text-[10px] text-neutral-400 mt-0.5">{item.lens}</p>
+            <p className="text-[13px] text-neutral-700 leading-relaxed mt-1.5">{item.take}</p>
+          </li>
+        ))}
+      </ul>
+      <p className="px-4 py-3 text-[11px] text-neutral-400 leading-relaxed border-t border-neutral-100">
+        {brief.limit}
+      </p>
+    </article>
+  )
 }
 
 function SageCard({ take, tone, stock }: { take: SageTake; tone: SageTone; stock: QuoteItem }) {
@@ -429,7 +523,9 @@ function ProvenanceNote() {
       {open && (
         <div className="mt-2 space-y-2 text-[12px] text-neutral-600 leading-relaxed">
           <p>清单按本产品的《价值清单 skill》执行：先过八道关，缺数据就标未知，未知不等于不通过。</p>
-          <p>市盈率来自上方同一路盘口。生意类型按名称/行业关键词归类，不是年报阅读。</p>
+          <p>市盈率来自上方同一路盘口。最新年报/半年报/季报来自东方财富 F10 主要指标，和上方财报条同一路。不是年报原文，也没有电话会。</p>
+          <p>赚钱质量看经营现金流÷净利；负债安全看资产负债率和流动比率。金融股不硬套普通企业杠杆。</p>
+          <p>三人财报解读是同一组数字的三种框架，不是大师原话。没有 MD&A 就不判断管理层是否坦诚。</p>
           <p>习惯买点 = 现价 ×（该行业习惯市盈率 ÷ 当前市盈率）。巴菲特/芒格/段永平只是同一公式的三种宽严，不是三人原话或持仓。</p>
           <p>结构借鉴了开源研究流程的写法（两分钟筛选、信息分级、数字用代码算）。不是微调了巴菲特模型，也不是股东信摘要。</p>
           <p>缺市盈率就不报价。这不是内在价值，也不能当投顾建议。收费卖的是清单和提醒，不是荐股。</p>

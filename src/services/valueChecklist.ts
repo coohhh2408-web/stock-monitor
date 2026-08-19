@@ -2,7 +2,7 @@ import { formatQuotePrice } from '@/lib/utils'
 import { inferBusinessKind, type BusinessKind } from '@/services/buffettMunger'
 import { buildSagePlan, getStockPe, PE_BAND } from '@/services/sagePlan'
 import { runValueSkill, type ValueSkillRun } from '@/services/valueSkill'
-import type { QuoteItem } from '@/types/market'
+import type { FinancialPeriod, QuoteItem } from '@/types/market'
 
 export type ChecklistVerdict = 'in-band' | 'wait' | 'skip' | 'no-data'
 
@@ -59,7 +59,7 @@ const KIND_LABEL: Record<BusinessKind, string> = {
 const HARD_SKIP: BusinessKind[] = ['futures']
 const WEAK_FIT: BusinessKind[] = ['commodity', 'auto', 'solar', 'realty', 'ev-battery', 'semiconductor']
 
-export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
+export function buildValueChecklist(stock: QuoteItem, financials?: FinancialPeriod | null): ValueChecklist {
   const kind = inferBusinessKind(stock)
   const kindLabel = KIND_LABEL[kind]
   const peNow = getStockPe(stock)
@@ -73,6 +73,7 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
     stock,
     kindLabel,
     peNow !== null && peHabit !== null ? peNow <= peHabit : null,
+    financials,
   )
 
   const lenses: HabitLens[] = (
@@ -107,6 +108,7 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
         gate('pe', '估值', 'na', '不按市盈率定价'),
         gate('price', '习惯买点', 'fail', '不适用'),
         gate('data', '数据', peNow ? 'pass' : 'warn', peNow ? `现 ${peNow.toFixed(0)}x` : '无市盈率'),
+        filingsGate(financials),
       ],
       lenses,
       skill,
@@ -128,7 +130,8 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
         gate('fit', '生意类型', WEAK_FIT.includes(kind) ? 'warn' : 'pass', kindLabel),
         gate('pe', '估值', 'na', '盘口无可用市盈率'),
         gate('price', '习惯买点', 'na', '不算价'),
-        gate('data', '数据', 'fail', '缺市盈率'),
+        gate('data', '数据', financials ? 'warn' : 'fail', financials ? `缺市盈率 · 已同步${financials.reportName}` : '缺市盈率'),
+        filingsGate(financials),
       ],
       lenses,
       skill,
@@ -159,7 +162,8 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
       gate('fit', '生意类型', WEAK_FIT.includes(kind) ? 'warn' : 'pass', kindLabel),
       gate('pe', '估值', inBand ? 'pass' : far ? 'fail' : 'warn', `现 ${peNow.toFixed(0)}x · 习惯 ${peHabit.toFixed(0)}x`),
       gate('price', '习惯买点', inBand ? 'pass' : 'warn', formatQuotePrice(habitPrice, stock.market)),
-      gate('data', '数据', 'pass', '与上方盘口同一路市盈率'),
+      gate('data', '数据', 'pass', financials ? `盘口市盈率 · ${financials.reportName}` : '与上方盘口同一路市盈率'),
+      filingsGate(financials),
     ],
     lenses,
     skill,
@@ -168,6 +172,11 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
 
 function pack(brief: ValueChecklist): ValueChecklist {
   return brief
+}
+
+function filingsGate(period: FinancialPeriod | null | undefined): ChecklistGate {
+  if (!period) return gate('filings', '最新财报', 'warn', '未同步')
+  return gate('filings', '最新财报', 'pass', period.reportName)
 }
 
 function gate(id: string, label: string, state: GateState, note: string): ChecklistGate {

@@ -20,6 +20,12 @@
 
 不用：`bullish | bearish | neutral` 当 C 端主结论。那是交易信号，不是清单。
 
+## xbtlin/ai-berkshire earnings-review、InvestSkill financial-report-analyst
+
+学：资料分级、经营现金流 vs 净利、YoY、红旗检测、第三方汇总必须标明。
+
+不用：没有原文时做 MD&A / 电话会语气；把超预期写成结论（我们没有一致预期）；从财报页给仓位。
+
 ## 产品一句
 
 本清单按《价值清单 skill》执行。结构参考上述 MIT 开源研究流程；买点公式和关卡计数是本产品规则。不是大师模型微调，也不是股东信摘要。

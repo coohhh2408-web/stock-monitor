@@ -1,5 +1,6 @@
-import { formatAmount, formatDash, formatListedCode, formatMarketCap, formatPrice, formatVolume } from '@/lib/utils'
-import type { QuoteItem } from '@/types/market'
+import { formatAmount, formatDash, formatLargeNumber, formatListedCode, formatMarketCap, formatPrice, formatVolume } from '@/lib/utils'
+import { cashConversion } from '@/services/financialsApi'
+import type { FinancialsPack, QuoteItem } from '@/types/market'
 
 function Cell({ label, value, accent }: { label: string; value: string; accent?: 'up' | 'down' | 'none' }) {
   const color =
@@ -18,7 +19,7 @@ function peLabel(stock: QuoteItem): string {
   return '市盈率'
 }
 
-export function QuoteStatsGrid({ stock }: { stock: QuoteItem }) {
+export function QuoteStatsGrid({ stock, financials }: { stock: QuoteItem; financials?: FinancialsPack | null }) {
   const listed = formatListedCode(stock.code, stock.market)
   const showLimits = stock.market === 'a-share' && (stock.limitUp !== undefined || stock.limitDown !== undefined)
   const vsOpen = stock.price - stock.open
@@ -53,6 +54,29 @@ export function QuoteStatsGrid({ stock }: { stock: QuoteItem }) {
             <Cell label="市盈(TTM)" value={formatDash(stock.peTtm)} />
           </>
         )}
+      </div>
+      {financials && <FilingsStrip pack={financials} />}
+    </div>
+  )
+}
+
+function FilingsStrip({ pack }: { pack: FinancialsPack }) {
+  const p = pack.latest
+  const conversion = cashConversion(p)
+  return (
+    <div className="mt-2 pt-2 border-t border-neutral-100">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[10px] text-neutral-400">{p.reportName} · 与清单同一路财报</p>
+        <p className="text-[10px] text-neutral-300">{pack.sourceLabel}</p>
+      </div>
+      <div className="grid grid-cols-4 gap-x-2">
+        <Cell label="营收" value={p.revenue === null ? '—' : formatLargeNumber(p.revenue)} />
+        <Cell label="归母净利" value={p.netProfit === null ? '—' : formatLargeNumber(p.netProfit)} />
+        <Cell
+          label="经营现金流/净利"
+          value={conversion === null ? '—' : `${(conversion * 100).toFixed(0)}%`}
+        />
+        <Cell label="资产负债率" value={p.debtRatio === null ? '—' : `${p.debtRatio.toFixed(1)}%`} />
       </div>
     </div>
   )

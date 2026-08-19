@@ -11,7 +11,7 @@ export const FEATURE_STUBS = {
   stockDetailDrawer: {
     id: 'stock-detail-drawer',
     label: '个股详情与 AI 诊断',
-    description: '真实 K 线 + 盘口 + 可核对的价值清单（习惯买点计算器）',
+    description: '真实 K 线 + 盘口 + 最新财报同步 + 可核对的价值清单',
     status: 'ready',
   },
   marketFilter: {
@@ -51,5 +51,5 @@ export const PRODUCT_GUARDRAILS = {
   usability: '三步内能完成，数字一眼能懂，空态也说得清下一步。',
   credibility: '来源、算法、边界写在界面上。能复核才收费，荐股和冒充大师不收费。',
   craft: '信息层级清楚，手机底栏不挡字，不靠炫技换信任。',
-  paidDiff: '卖纪律和工具：做T、到价提醒、可复核的框架；不拼资讯量和社区嗓门。',
+  paidDiff: '卖纪律和工具：做T、到价提醒、可复核的框架和财报清单；不拼资讯量和社区嗓门。',
 } as const
