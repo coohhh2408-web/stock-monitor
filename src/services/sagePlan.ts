@@ -28,7 +28,7 @@ interface PeBand {
   stretch: number
 }
 
-const PE_BAND: Record<Exclude<BusinessKind, 'futures'>, PeBand> = {
+export const PE_BAND: Record<Exclude<BusinessKind, 'futures'>, PeBand> = {
   'consumer-franchise': { add: 18, buy: 22, stretch: 32 },
   bank: { add: 6, buy: 8, stretch: 12 },
   insurance: { add: 7, buy: 10, stretch: 14 },
@@ -95,7 +95,7 @@ export function buildSagePlan(
   author: SageAuthorId,
 ): SagePlan {
   const now = stock.price
-  const pe = peOf(stock)
+  const pe = getStockPe(stock)
   const style = AUTHOR[author]
   const money = (n: number) => formatQuotePrice(roundMoney(n, now), stock.market)
 
@@ -193,7 +193,7 @@ export function formatVsNow(target: number | null, now: number): string {
   return vsNow(target, now)
 }
 
-function peOf(stock: QuoteItem): number | null {
+export function getStockPe(stock: QuoteItem): number | null {
   const pe = stock.pe ?? stock.peTtm
   if (pe === undefined || !Number.isFinite(pe) || pe === 0) return null
   return pe

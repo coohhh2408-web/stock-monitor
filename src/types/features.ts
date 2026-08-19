@@ -11,7 +11,7 @@ export const FEATURE_STUBS = {
   stockDetailDrawer: {
     id: 'stock-detail-drawer',
     label: '个股详情与 AI 诊断',
-    description: '真实 K 线 + 盘口数据 + 巴菲特/芒格/段永平定量建议 + AI 价值面诊断 + F10/快讯',
+    description: '真实 K 线 + 盘口 + 可核对的价值清单（习惯买点计算器）',
     status: 'ready',
   },
   marketFilter: {
