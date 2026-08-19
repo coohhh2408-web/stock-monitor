@@ -3,6 +3,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { ChangeCapsule, SentimentTag } from '@/components/ui/StocksPrimitives'
 import { KlineChart } from '@/components/ui/KlineChart'
 import { QuoteStatsGrid } from './QuoteStatsGrid'
+import { BuffettMungerBrief } from './BuffettMungerBrief'
 import { SkeletonText } from '@/components/ui/Skeleton'
 import { cn, formatPrice, getChangeColor } from '@/lib/utils'
 import { fetchFlashNews, fetchStockNews } from '@/services/newsApi'
@@ -24,7 +25,7 @@ interface StockDetailPanelProps {
   stock: QuoteItem | null
   aiDiagnosis: AIDiagnosisStub
   onClose: () => void
-  onGenerateAI: () => void
+  onGenerateAI: (stock: QuoteItem) => void
   isMobile?: boolean
 }
 
@@ -230,6 +231,7 @@ export function StockDetailPanel({
         <div className="relative min-h-[160px]">
           {tab === 'ai' && (
             <div>
+              <BuffettMungerBrief stock={display} />
               {aiDiagnosis.status === 'loading' ? (
                 <div className="ai-glow-card">
                   <SkeletonText lines={4} />
@@ -257,7 +259,7 @@ export function StockDetailPanel({
                 <div className="ai-glow-card text-center py-6">
                   <p className="text-sm text-neutral-500 mb-3">生成 AI 异动速读分析</p>
                   <button
-                    onClick={onGenerateAI}
+                    onClick={() => onGenerateAI(display)}
                     className="text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-4 py-2 rounded-full font-medium transition-colors"
                   >
                     开始分析

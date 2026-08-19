@@ -126,7 +126,7 @@ async function fetchHistory(quote: QuoteItem, period: 'day' | 'week' | 'month'):
     `&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61` +
     `&klt=${klt}&fqt=1&end=20500101&lmt=${lmt}&ut=${UT}`
   const payload = await getJsonFallback<EastMoneyKline>(hisUrls(path))
-  return (payload.data?.klines ?? []).map(parseKlineLine).filter((b): b is KlineBar => !!b)
+  return (payload.data?.klines ?? []).map((line) => parseKlineLine(line)).filter((b): b is KlineBar => !!b)
 }
 
 export async function fetchChartSeries(

@@ -151,7 +151,7 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
         stock={selectedStock}
         aiDiagnosis={aiDiagnosis}
         onClose={() => setPanelOpen(false)}
-        onGenerateAI={() => selectedStock && generateAI(selectedStock)}
+        onGenerateAI={(stock) => generateAI(stock)}
         isMobile={isMobile}
       />
     </div>
