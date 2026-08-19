@@ -65,47 +65,54 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-## iOS 端（Capacitor + Swift Package Manager）
+## iOS 端（Capacitor 薄壳）
+
+网页功能还没做完。iOS **不要复制**行情 / 价值清单 / 财报 / 资讯页面，只包一层 WebView。改产品先改 `src/`，原生只留余量。
+
+细则见 [`skills/ios-shell/SKILL.md`](skills/ios-shell/SKILL.md)。
 
 ### 环境要求
 
 - macOS + **Xcode 15+**（含 iOS Simulator）
-- 无需 CocoaPods（项目使用 SPM）
+- 无需 CocoaPods（SPM）
 
-### 首次构建
+### 日常：Web 还在改时（推荐）
+
+模拟器直接加载 Vite，改清单和财报不必重编原生：
 
 ```bash
-cd ~/Projects/stock-monitor
 npm install
-npm run ios:add      # 仅首次：生成 ios/ 工程（SPM 模板）
-npm run ios:build    # 构建 Web + 同步到 ios/
-npm run ios:open     # 用 Xcode 打开工程
+npm run dev          # vite 已 host: true，手机/模拟器走局域网
+# 另开终端，把 IP 换成 Mac 的局域网地址
+CAP_SERVER_URL=http://192.168.1.12:5173 npm run ios:live
 ```
 
-在 Xcode 中：
-1. 选择目标设备（如 **iPhone 17** 模拟器）
-2. 点击 ▶ Run
+在 Xcode 选模拟器或真机 Run。第一次需要信任开发者证书。
 
-或直接命令行运行：
+### 打包进 App（离线包 / 提测）
 
 ```bash
-npm run ios:run      # 构建 + 启动 iPhone 17 模拟器
+npm run ios:build    # vite build + cap sync，不带 CAP_SERVER_URL
+npm run ios:open
+# 或
+npm run ios:run      # 同步后让 Capacitor 列出可用模拟器
 ```
 
-### 日常开发
+不要把开发机 IP 或模拟器 UDID 写进仓库。
 
-```bash
-npm run dev          # Web 热更新调试
-npm run ios:build    # 改完代码后同步到 iOS
-```
+### iOS 壳现在有什么
 
-### iOS 特性
+- 桌面名「到价提醒」，与网页同一套 React
+- `CapacitorHttp`：打包后可直连没有 CORS 的东财快讯 / 财联社
+- 回前台时刷新行情
+- Safe Area、浅色状态栏
+- 隐私清单占位（还不上架）
 
-- 底部 Tab 栏（行情 / 持仓 / 提醒）— 对齐 Apple Stocks
-- Safe Area 适配（刘海 / Home Indicator）
-- 个股详情 **底部 Sheet** 弹出（非居中弹窗）
-- 状态栏浅色样式
-- 与 Web 共享同一套 React 代码与 localStorage 数据逻辑
+### 还没做（等网页定型）
+
+- App Store 图标 / 启动图定稿
+- 推送、后台刷新
+- 加密同步的出口合规勾选（现在用了 AES-GCM，不要擅自声明「只用豁免加密」）
 
 ## 项目结构
 
@@ -123,3 +130,4 @@ ios/                               # Xcode 工程（SPM）
 - [x] 分享链接跨设备（快照 gzip 编码进 URL，无需后端）
 - [x] 云端多端同步（Supabase + 客户端加密）
 - [ ] App Store 上架配置（图标、启动屏、隐私说明）
+- [ ] 等网页功能定型后再加原生推送 / 后台刷新，不提前焊死信息架构

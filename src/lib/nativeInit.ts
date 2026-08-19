@@ -1,5 +1,8 @@
+import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
+
+export const APP_RESUME_EVENT = 'app-resume'
 
 export async function initNativeApp(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
@@ -15,6 +18,10 @@ export async function initNativeApp(): Promise<void> {
       await StatusBar.setOverlaysWebView({ overlay: true })
     }
   } catch {
-    // optional
+    // optional on web preview
   }
+
+  void App.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) window.dispatchEvent(new Event(APP_RESUME_EVENT))
+  })
 }

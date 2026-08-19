@@ -16,6 +16,7 @@ import {
   MOCK_ALERTS,
 } from '@/data/mockData'
 import { loadFromStorage, saveToStorage, removeFromStorage, STORAGE_KEYS } from '@/lib/storage'
+import { APP_RESUME_EVENT } from '@/lib/nativeInit'
 import { tickQuote, syncPositionPrice, computePortfolioSummary, generateAIDiagnosis, generateSparkline, buildPosition } from '@/services/marketService'
 import { fetchLiveQuote, fetchLiveQuotes } from '@/services/quoteApi'
 import { recommendedPollMs } from '@/lib/marketHours'
@@ -431,6 +432,14 @@ export function AppProvider({
     state.quotes.length,
     pullLiveQuotes,
   ])
+
+  useEffect(() => {
+    const onResume = () => {
+      if (state.settings.liveQuotesEnabled) void pullLiveQuotes(true)
+    }
+    window.addEventListener(APP_RESUME_EVENT, onResume)
+    return () => window.removeEventListener(APP_RESUME_EVENT, onResume)
+  }, [state.settings.liveQuotesEnabled, pullLiveQuotes])
 
   useEffect(() => {
     const activeAlerts = state.alerts.filter((a) => a.isActive)
