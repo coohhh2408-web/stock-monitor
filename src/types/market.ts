@@ -59,6 +59,7 @@ export interface AIDiagnosisStub {
   anomalySummary?: string
   buffettSummary?: string
   mungerSummary?: string
+  duanSummary?: string
 }
 
 export interface AnnouncementItem {

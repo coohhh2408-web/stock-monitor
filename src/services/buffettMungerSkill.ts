@@ -1,5 +1,6 @@
 import type { QuoteItem } from '@/types/market'
-import { getEffectivePe, inferBusinessKind, type BusinessKind } from '@/services/buffettMunger'
+import { getEffectivePe, inferBusinessKind, type BusinessKind, type ValueStance } from '@/services/buffettMunger'
+import { buildSagePlan, type SageAuthorId, type SagePlan } from '@/services/sagePlan'
 
 export type GateVerdict = 'pass' | 'conditional' | 'gray' | 'reject'
 
@@ -16,6 +17,7 @@ export interface MasterRow {
   score: number
   take: string
   question: string
+  plan?: SagePlan
 }
 
 export interface SkillBrief {
@@ -226,7 +228,7 @@ export function buildSkillBrief(stock: QuoteItem): SkillBrief {
   const scores: ChecklistScores = { ...base, margin }
   const composite = average(scores)
   const verdict = decideVerdict(kind, scores, composite)
-  const masters = known?.masters ?? composeMasters(stock, kind, scores, pe)
+  const masters = withPlans(stock, kind, known?.masters ?? composeMasters(stock, kind, scores, pe))
   const inversion = known?.inversion ?? KIND_INVERSION[kind]
   return {
     verdict,
@@ -235,9 +237,30 @@ export function buildSkillBrief(stock: QuoteItem): SkillBrief {
     scores,
     masters,
     inversion,
-    strategy: strategyCopy(verdict, stock),
+    strategy: strategyCopy(verdict, masters),
     limit: limitCopy(stock, pe),
   }
+}
+
+function stanceFromScore(score: number): ValueStance {
+  if (score >= 4.2) return 'constructive'
+  if (score >= 3.3) return 'cautious'
+  return 'skeptical'
+}
+
+function authorId(author: MasterRow['author']): SageAuthorId | null {
+  if (author === '巴菲特') return 'buffett'
+  if (author === '芒格') return 'munger'
+  if (author === '段永平') return 'duan'
+  return null
+}
+
+function withPlans(stock: QuoteItem, kind: BusinessKind, masters: MasterRow[]): MasterRow[] {
+  return masters.map((row) => {
+    const id = authorId(row.author)
+    if (!id) return row
+    return { ...row, plan: buildSagePlan(stock, kind, stanceFromScore(row.score), id) }
+  })
 }
 
 export function starBar(score: number): string {
@@ -345,38 +368,32 @@ function kindLabel(kind: BusinessKind): string {
   return map[kind]
 }
 
-function strategyCopy(verdict: GateVerdict, stock: QuoteItem): { empty: string; holder: string } {
-  const name = stock.name
-  if (verdict === 'pass') {
+function strategyCopy(
+  verdict: GateVerdict,
+  masters: MasterRow[],
+): { empty: string; holder: string } {
+  const duan = masters.find((m) => m.author === '段永平')?.plan
+  const buffett = masters.find((m) => m.author === '巴菲特')?.plan
+  if (verdict === 'reject') {
     return {
-      empty: `空仓者：生意质量过关，但仍要用财报验证安全边际后再考虑分批。`,
-      holder: `持仓者：继续持有的前提是护城河没有变窄；卖出信号是定价权或诚信被破坏，而不是股价波动。`,
+      empty: `空仓者：三人里只要有人给 0 仓，就先按 0 处理。当前不建仓。`,
+      holder: `持仓者：先核对买入前提还在不在。前提没了就减到段永平说的上限（现在是 ${duan?.maxLotPct ?? '0%'}）。`,
     }
   }
-  if (verdict === 'conditional') {
-    return {
-      empty: `空仓者：先放观察名单。缺年报交叉验证，不在当前盘口上编造买入区间。`,
-      holder: `持仓者：仓位与「看不懂的部分」成反比。加仓信号必须是生意变好，不是只是更便宜。`,
-    }
-  }
-  if (verdict === 'gray') {
-    return {
-      empty: `空仓者：灰色地带默认不买。${name}还没有通过「5句话说清」的镜子测试。`,
-      holder: `持仓者：不要用补仓证明自己是对的。先补信息，再谈动作。`,
-    }
-  }
+  const wait = duan?.buyTo ?? buffett?.buyTo
+  const waitText = wait != null ? `更严的等待价看段永平：约 ${wait.toFixed(2)}` : '先等对的价格'
   return {
-    empty: `空仓者：不通过。路过是纪律。`,
-    holder: `持仓者：重新检查当初买入的前提是否还在；前提没了就该处理。`,
+    empty: `空仓者：不要按综合分直接买。巴菲特若说可买，也只允许他的第一笔 ${buffett?.firstLotPct ?? '—'}；${waitText}。`,
+    holder: `持仓者：加仓看更严的那一档（通常是段永平），减仓看芒格的价格纪律，而不是因为涨了就开心。`,
   }
 }
 
 function limitCopy(stock: QuoteItem, pe: number | null): string {
   const bits = [
-    '仅有盘口快照，没有年报双源交叉验证，不做内在价值区间。',
-    'AI 分析置信度低，不等于生意一定差。',
+    '买入区由现价和市盈率回推，不是完整 DCF，不能当成内在价值。',
+    '仓位百分比相对总资产，仅作框架对照。',
   ]
-  if (pe === null) bits.push('缺少可用市盈率，安全边际一栏置信度更低。')
+  if (pe === null) bits.push('缺少可用市盈率时，改用现价回撤带，误差更大。')
   if (!stock.industry) bits.push('行业字段缺失，能力圈与护城河评分偏框架默认值。')
   return bits.join('')
 }

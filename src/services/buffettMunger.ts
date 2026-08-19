@@ -1,17 +1,20 @@
+import { buildSagePlan, type SagePlan } from '@/services/sagePlan'
 import type { QuoteItem } from '@/types/market'
 
 export type ValueStance = 'constructive' | 'cautious' | 'skeptical'
 
 export interface SageTake {
-  author: '巴菲特' | '芒格'
+  author: '巴菲特' | '芒格' | '段永平'
   lens: string
   stance: ValueStance
   summary: string
+  plan: SagePlan
 }
 
 export interface BuffettMungerBrief {
   buffett: SageTake
   munger: SageTake
+  duan: SageTake
 }
 
 export type BusinessKind =
@@ -243,6 +246,158 @@ const KNOWN: KnownProfile[] = [
   },
 ]
 
+const DUAN_BY_CODE: Record<string, { stance: ValueStance; summary: string }> = {
+  '600519': {
+    stance: 'cautious',
+    summary:
+      '对的生意没问题：卖身份认同的高毛利消费品。但好生意被追高，就不是对的价格。本分是等，不是因为是茅台就现在买。',
+  },
+  '000858': {
+    stance: 'cautious',
+    summary: '也是白酒，但不等于茅台。对的生意要更挑剔，对的价格要更便宜。看不清批价和库存就先不动。',
+  },
+  '000568': {
+    stance: 'cautious',
+    summary: '也是白酒，但不等于茅台。对的生意要更挑剔，对的价格要更便宜。看不清批价和库存就先不动。',
+  },
+  AAPL: {
+    stance: 'constructive',
+    summary: '这是对的生意，用户愿意年复一年付钱。下一步不是追涨，是有现金了按纪律加，没有对的价格就不加。',
+  },
+  KO: {
+    stance: 'constructive',
+    summary: '能看懂的消费品。别把「熟悉」当成可以任意价格买入。对的价格出现了再买。',
+  },
+  PEP: {
+    stance: 'constructive',
+    summary: '能看懂的消费品。别把「熟悉」当成可以任意价格买入。对的价格出现了再买。',
+  },
+  '300750': {
+    stance: 'skeptical',
+    summary: '技术迭代太快，不是我的本分。看不懂五年后护城河在哪，仓位就该是 0。',
+  },
+  NVDA: {
+    stance: 'skeptical',
+    summary: '好公司不等于现在就该买。看不懂谁会赢下一代，就不要硬懂。本分是放过。',
+  },
+  TSLA: {
+    stance: 'skeptical',
+    summary: '故事太满。不是对的价格，也很难算成对的生意。不碰。',
+  },
+  '002594': {
+    stance: 'cautious',
+    summary: '能造车值得尊重，但汽车生意很难。没到对的价格之前，研究不等于要买。',
+  },
+  MSFT: {
+    stance: 'cautious',
+    summary: '对的生意。云和办公能看懂。现在是不是对的价格，要另算；不对就不加。',
+  },
+  AMZN: {
+    stance: 'cautious',
+    summary: '零售薄利、AWS 才像好生意。报表难看也可以，价格不对就等。',
+  },
+  META: {
+    stance: 'cautious',
+    summary: '社交可以很好，也可以很快过时。看不清下一代还用不用，就不要重仓。',
+  },
+  '00700': {
+    stance: 'cautious',
+    summary: '社交和游戏是能看懂的生意。生态故事先放一边，价格不对就不动。',
+  },
+  '03690': {
+    stance: 'skeptical',
+    summary: '单位经济没看清之前，规模不是护城河。本分是 0 仓位。',
+  },
+  '600036': {
+    stance: 'cautious',
+    summary: '银行要保守。文化不对或价格不对，都不买。便宜了再谈。',
+  },
+  '601318': {
+    stance: 'skeptical',
+    summary: '综合金融太复杂。看不懂浮存金怎么用，就当不是对的生意。',
+  },
+  '601012': {
+    stance: 'skeptical',
+    summary: '光伏拼产能，不是对的生意。本分是避开资本开支竞赛。',
+  },
+  '603993': {
+    stance: 'skeptical',
+    summary: '商品价格不是护城河。周期股可以研究，但很少是对的生意。',
+  },
+  '002938': {
+    stance: 'cautious',
+    summary: '给巨人打工可以活，但很难成为对的生意。客户一走，故事就没了。',
+  },
+}
+
+const DUAN_KIND: Record<BusinessKind, { stance: ValueStance; line: (name: string, valuation: string) => string }> = {
+  'consumer-franchise': {
+    stance: 'cautious',
+    line: (name, valuation) =>
+      `${name}若真是重复购买的好品牌，就是对的生意。下一步只问今天是不是对的价格。${valuation}好公司也可以等。`,
+  },
+  bank: {
+    stance: 'cautious',
+    line: (name, valuation) => `银行不是不能买，但必须保守。${name}文化看不清就放过。${valuation}`,
+  },
+  insurance: {
+    stance: 'skeptical',
+    line: (name, valuation) => `看不懂浮存金怎么用，就不是对的生意。${name}报表越复杂越要本分。${valuation}`,
+  },
+  platform: {
+    stance: 'cautious',
+    line: (name, valuation) => `先问用户为什么付钱，再问是不是靠补贴。${name}单位经济没算清，仓位就是 0。${valuation}`,
+  },
+  semiconductor: {
+    stance: 'skeptical',
+    line: (name) => `${name}迭代太快。看不懂就不要装懂，这是本分不是胆小。`,
+  },
+  'ev-battery': {
+    stance: 'skeptical',
+    line: (name) => `${name}要靠持续砸钱维持份额。这不像对的生意，价格再便宜也先放。`,
+  },
+  commodity: {
+    stance: 'skeptical',
+    line: (name) => `${name}没有定价权。商品周期不是我愿意长期持有的生意。`,
+  },
+  auto: {
+    stance: 'skeptical',
+    line: (name) => `汽车很难成为对的生意。${name}再强，也不在「关市五年也安心」的清单里。`,
+  },
+  solar: {
+    stance: 'skeptical',
+    line: (name) => `${name}拼产能。这不是对的生意。`,
+  },
+  pharma: {
+    stance: 'skeptical',
+    line: (name) => `分子式不是我的本分。${name}看不懂就不买。`,
+  },
+  telecom: {
+    stance: 'cautious',
+    line: (name, valuation) => `${name}能看懂，但回报常被封顶。对的价格要更便宜。${valuation}`,
+  },
+  utility: {
+    stance: 'cautious',
+    line: (name, valuation) => `${name}无聊是优点。别用成长股的价格去买它。${valuation}`,
+  },
+  realty: {
+    stance: 'skeptical',
+    line: (name) => `高杠杆不是本分。${name}看不清负债就不碰。`,
+  },
+  manufacturing: {
+    stance: 'cautious',
+    line: (name, valuation) => `${name}可以很勤奋，但不等于对的生意。客户能换，就要更便宜才买。${valuation}`,
+  },
+  futures: {
+    stance: 'skeptical',
+    line: (name) => `${name}不是企业。这不叫投资。仓位 0。`,
+  },
+  unknown: {
+    stance: 'cautious',
+    line: (name, valuation) => `5 句话说不清${name}为什么赚钱，就先不动。${valuation}本分是等看懂。`,
+  },
+}
+
 const STANCE_LABEL: Record<ValueStance, string> = {
   constructive: '偏建设性',
   cautious: '审慎观望',
@@ -256,9 +411,7 @@ export function stanceLabel(stance: ValueStance): string {
 export function buildBuffettMungerBrief(stock: QuoteItem): BuffettMungerBrief {
   const known = matchKnown(stock)
   if (known) return withValuationOverlay(stock, known)
-
-  const kind = inferBusinessKind(stock)
-  return composeFromKind(stock, kind)
+  return composeFromKind(stock, inferBusinessKind(stock))
 }
 
 function matchKnown(stock: QuoteItem): BuffettMungerBrief | null {
@@ -270,19 +423,24 @@ function matchKnown(stock: QuoteItem): BuffettMungerBrief | null {
       item.names.some((n) => name.includes(n.toLowerCase()) || n.toLowerCase().includes(name)),
   )
   if (!hit) return null
+  const duan = DUAN_BY_CODE[hit.codes[0]] ?? DUAN_KIND[hit.kind]
+  const duanSummary = 'summary' in duan && duan.summary ? duan.summary : DUAN_KIND[hit.kind].line(stock.name, '')
   return {
-    buffett: take('巴菲特', '护城河 · 业主收益 · 安全边际', hit.buffettStance, hit.buffett),
-    munger: take('芒格', '逆向思考 · 能力圈 · 避免蠢事', hit.mungerStance, hit.munger),
+    buffett: take('巴菲特', '护城河 · 业主收益 · 安全边际', hit.buffettStance, hit.buffett, stock, hit.kind),
+    munger: take('芒格', '逆向思考 · 能力圈 · 避免蠢事', hit.mungerStance, hit.munger, stock, hit.kind),
+    duan: take('段永平', '对的生意 · 对的人 · 对的价格', duan.stance, duanSummary, stock, hit.kind),
   }
 }
 
 function composeFromKind(stock: QuoteItem, kind: BusinessKind): BuffettMungerBrief {
   const name = stock.name
   const valuation = describeValuation(stock)
-  const { buffett, munger, buffettStance, mungerStance } = KIND_COPY[kind](name, valuation, stock)
+  const copy = KIND_COPY[kind](name, valuation, stock)
+  const duan = DUAN_KIND[kind]
   return {
-    buffett: take('巴菲特', '护城河 · 业主收益 · 安全边际', buffettStance, buffett),
-    munger: take('芒格', '逆向思考 · 能力圈 · 避免蠢事', mungerStance, munger),
+    buffett: take('巴菲特', '护城河 · 业主收益 · 安全边际', copy.buffettStance, copy.buffett, stock, kind),
+    munger: take('芒格', '逆向思考 · 能力圈 · 避免蠢事', copy.mungerStance, copy.munger, stock, kind),
+    duan: take('段永平', '对的生意 · 对的人 · 对的价格', duan.stance, duan.line(name, valuation), stock, kind),
   }
 }
 
@@ -292,6 +450,7 @@ function withValuationOverlay(stock: QuoteItem, brief: BuffettMungerBrief): Buff
   return {
     buffett: { ...brief.buffett, summary: `${brief.buffett.summary}${note.buffett}` },
     munger: { ...brief.munger, summary: `${brief.munger.summary}${note.munger}` },
+    duan: { ...brief.duan, summary: `${brief.duan.summary}${note.duan}` },
   }
 }
 
@@ -300,8 +459,11 @@ function take(
   lens: string,
   stance: ValueStance,
   summary: string,
+  stock: QuoteItem,
+  kind: BusinessKind,
 ): SageTake {
-  return { author, lens, stance, summary }
+  const id = author === '巴菲特' ? 'buffett' : author === '芒格' ? 'munger' : 'duan'
+  return { author, lens, stance, summary, plan: buildSagePlan(stock, kind, stance, id) }
 }
 
 export function inferBusinessKind(stock: QuoteItem): BusinessKind {
@@ -460,19 +622,21 @@ function describeValuation(stock: QuoteItem): string {
   return ''
 }
 
-function valuationClause(stock: QuoteItem): { buffett: string; munger: string } | null {
+function valuationClause(stock: QuoteItem): { buffett: string; munger: string; duan: string } | null {
   const pe = getEffectivePe(stock)
   if (pe === null || pe <= 0) return null
   if (pe < 12) {
     return {
       buffett: `以约 ${pe.toFixed(0)} 倍市盈率衡量，价格端比情绪热闹时更有容错。`,
       munger: `便宜不是充分条件，但确实减少了「做蠢事」的空间。`,
+      duan: `便宜了才开始谈仓位；但便宜仍要先问是不是对的生意。`,
     }
   }
   if (pe > 40) {
     return {
       buffett: `大约 ${pe.toFixed(0)} 倍市盈率意味着几乎没有安全边际，再好的生意也不能无视价格。`,
       munger: `高估值把未来的完美执行变成了义务——义务越多，越该谨慎。`,
+      duan: `这个价格不是对的价格。再好也不追，仓位就该是 0。`,
     }
   }
   return null

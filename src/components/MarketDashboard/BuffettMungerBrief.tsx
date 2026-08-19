@@ -8,11 +8,14 @@ import {
   starBar,
   VERDICT_LABEL,
   type GateVerdict,
+  type MasterRow,
   type SkillBrief,
 } from '@/services/buffettMungerSkill'
+import { formatPlanPrice, formatVsNow, type SagePlan } from '@/services/sagePlan'
 import type { QuoteItem } from '@/types/market'
 
 type SageView = 'compare' | 'prose' | 'skill'
+type SageTone = 'buffett' | 'munger' | 'duan'
 
 export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
   const [view, setView] = useState<SageView>('compare')
@@ -23,8 +26,8 @@ export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
     <section className="mb-4">
       <div className="flex items-end justify-between gap-3 mb-2.5">
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-neutral-800">巴菲特 / 芒格速评</p>
-          <p className="text-[11px] text-neutral-400 mt-0.5">两套本地框架对照，非原话或持仓</p>
+          <p className="text-[13px] font-semibold text-neutral-800">巴菲特 / 芒格 / 段永平</p>
+          <p className="text-[11px] text-neutral-400 mt-0.5">定性判断 + 定量下一步，非原话或持仓建议</p>
         </div>
       </div>
       <SegmentedControl
@@ -42,13 +45,14 @@ export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
       {(view === 'compare' || view === 'prose') && (
         <VersionBlock
           kicker="速评版"
-          title="人格化短评"
-          hint="本地规则 · 巴菲特 / 芒格各一段话"
+          title="三人短评 + 下一步"
+          hint="买入区按现价/市盈率回推"
           className={view === 'compare' ? 'mb-3' : undefined}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <SageCard take={prose.buffett} tone="buffett" />
-            <SageCard take={prose.munger} tone="munger" />
+          <div className="grid grid-cols-1 gap-2.5">
+            <SageCard take={prose.buffett} tone="buffett" stock={stock} />
+            <SageCard take={prose.munger} tone="munger" stock={stock} />
+            <SageCard take={prose.duan} tone="duan" stock={stock} />
           </div>
         </VersionBlock>
       )}
@@ -57,9 +61,9 @@ export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
         <VersionBlock
           kicker="框架版"
           title="AI Berkshire 清单"
-          hint="强制结论 · 四大师对抗 · 不编造买价"
+          hint="强制结论 · 三人给不同买价"
         >
-          <SkillMemo brief={skill} />
+          <SkillMemo brief={skill} stock={stock} />
         </VersionBlock>
       )}
     </section>
@@ -93,26 +97,22 @@ function VersionBlock({
   )
 }
 
-function SageCard({ take, tone }: { take: SageTake; tone: 'buffett' | 'munger' }) {
-  const isBuffett = tone === 'buffett'
+function SageCard({ take, tone, stock }: { take: SageTake; tone: SageTone; stock: QuoteItem }) {
+  const mark = tone === 'buffett' ? '巴' : tone === 'munger' ? '芒' : '段'
+  const chip =
+    tone === 'buffett' ? 'bg-[#1F6B4A]' : tone === 'munger' ? 'bg-[#334155]' : 'bg-[#3730A3]'
+  const board =
+    tone === 'buffett'
+      ? 'bg-gradient-to-br from-amber-50/90 to-white border-amber-200/70'
+      : tone === 'munger'
+        ? 'bg-gradient-to-br from-slate-50 to-white border-slate-200/80'
+        : 'bg-gradient-to-br from-indigo-50/90 to-white border-indigo-200/70'
   return (
-    <article
-      className={cn(
-        'rounded-2xl p-4 border',
-        isBuffett
-          ? 'bg-gradient-to-br from-amber-50/90 to-white border-amber-200/70'
-          : 'bg-gradient-to-br from-slate-50 to-white border-slate-200/80',
-      )}
-    >
+    <article className={cn('rounded-2xl p-4 border', board)}>
       <div className="flex items-start justify-between gap-2 mb-2.5">
         <div className="flex items-center gap-2 min-w-0">
-          <span
-            className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold text-white shrink-0',
-              isBuffett ? 'bg-[#1F6B4A]' : 'bg-[#334155]',
-            )}
-          >
-            {isBuffett ? '巴' : '芒'}
+          <span className={cn('w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-semibold text-white shrink-0', chip)}>
+            {mark}
           </span>
           <div className="min-w-0">
             <p className="text-[13px] font-semibold text-neutral-900 leading-tight">{take.author}</p>
@@ -122,6 +122,7 @@ function SageCard({ take, tone }: { take: SageTake; tone: 'buffett' | 'munger' }
         <StancePill stance={take.stance} />
       </div>
       <p className="text-[13px] text-neutral-700 leading-relaxed">{take.summary}</p>
+      <PlanBlock plan={take.plan} stock={stock} />
     </article>
   )
 }
@@ -140,7 +141,54 @@ function StancePill({ stance }: { stance: ValueStance }) {
   )
 }
 
-function SkillMemo({ brief }: { brief: SkillBrief }) {
+function PlanBlock({ plan, stock }: { plan: SagePlan; stock: QuoteItem }) {
+  const buy =
+    plan.buyFrom !== null && plan.buyTo !== null
+      ? `${formatPlanPrice(plan.buyFrom, stock)}–${formatPlanPrice(plan.buyTo, stock)}`
+      : '—'
+  const buyVs = plan.buyTo !== null ? formatVsNow(plan.buyTo, plan.nowPrice) : ''
+  return (
+    <div className="mt-3 pt-3 border-t border-black/[0.05]">
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-2">
+        <PlanCell label="下一步" value={plan.actionLabel} />
+        <PlanCell label="建议仓位" value={`首笔 ${plan.firstLotPct} · 上限 ${plan.maxLotPct}`} />
+        <PlanCell label="买入区" value={buy} hint={buyVs} />
+        <PlanCell
+          label="加仓"
+          value={formatPlanPrice(plan.addAt, stock)}
+          hint={formatVsNow(plan.addAt, plan.nowPrice)}
+        />
+        <PlanCell
+          label={plan.trimAt === null ? '减仓' : '减仓'}
+          value={plan.trimAt === null ? '不因上涨卖' : formatPlanPrice(plan.trimAt, stock)}
+          hint={formatVsNow(plan.trimAt, plan.nowPrice)}
+        />
+        <PlanCell
+          label="重审"
+          value={formatPlanPrice(plan.reviewAt, stock)}
+          hint={formatVsNow(plan.reviewAt, plan.nowPrice)}
+        />
+      </div>
+      <p className="text-[12px] text-neutral-700 leading-relaxed">{plan.nextStep}</p>
+      <p className="text-[10px] text-neutral-400 mt-1 leading-relaxed">{plan.basis}</p>
+    </div>
+  )
+}
+
+function PlanCell({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10px] text-neutral-400">{label}</p>
+      <p className="text-[12px] font-medium tabular text-neutral-800 truncate">
+        {value}
+        {hint ? <span className="text-neutral-400 font-normal ml-1">{hint}</span> : null}
+      </p>
+    </div>
+  )
+}
+
+function SkillMemo({ brief, stock }: { brief: SkillBrief; stock: QuoteItem }) {
+  const priced = brief.masters.filter((row) => row.plan)
   return (
     <article className="rounded-2xl border border-neutral-200/80 bg-white overflow-hidden">
       <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-neutral-100">
@@ -171,9 +219,32 @@ function SkillMemo({ brief }: { brief: SkillBrief }) {
             </div>
             <p className="text-[12px] text-neutral-700 leading-relaxed">{row.take}</p>
             <p className="text-[11px] text-neutral-400 mt-1 leading-relaxed">追问：{row.question}</p>
+            {row.plan ? <PlanStrip plan={row.plan} stock={stock} /> : null}
           </li>
         ))}
       </ul>
+
+      {priced.length > 0 && (
+        <div className="px-4 py-3 border-t border-neutral-100 overflow-x-auto">
+          <p className="text-[11px] font-semibold text-neutral-800 mb-2">三人下一步对照</p>
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-[10px] text-neutral-400">
+                <th className="font-medium pb-1 pr-2"> </th>
+                {priced.map((row) => (
+                  <th key={row.author} className="font-medium pb-1 pr-2">{row.author}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="text-[11px] text-neutral-700">
+              <CompareRow label="动作" rows={priced} render={(row) => row.plan!.actionLabel} />
+              <CompareRow label="买入上沿" rows={priced} render={(row) => formatPlanPrice(row.plan!.buyTo, stock)} />
+              <CompareRow label="加仓" rows={priced} render={(row) => formatPlanPrice(row.plan!.addAt, stock)} />
+              <CompareRow label="首笔仓位" rows={priced} render={(row) => row.plan!.firstLotPct} />
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="px-4 py-3 bg-neutral-50/80 space-y-2">
         <p className="text-[12px] text-neutral-700 leading-relaxed">
@@ -185,6 +256,35 @@ function SkillMemo({ brief }: { brief: SkillBrief }) {
         <p className="text-[10px] text-neutral-400 leading-relaxed">{brief.limit}</p>
       </div>
     </article>
+  )
+}
+
+function CompareRow({
+  label,
+  rows,
+  render,
+}: {
+  label: string
+  rows: MasterRow[]
+  render: (row: MasterRow) => string
+}) {
+  return (
+    <tr>
+      <td className="text-neutral-400 py-0.5 pr-2 whitespace-nowrap">{label}</td>
+      {rows.map((row) => (
+        <td key={row.author} className="tabular py-0.5 pr-2">{render(row)}</td>
+      ))}
+    </tr>
+  )
+}
+
+function PlanStrip({ plan, stock }: { plan: SagePlan; stock: QuoteItem }) {
+  return (
+    <p className="text-[11px] text-neutral-600 mt-1.5 leading-relaxed">
+      {plan.actionLabel}
+      {plan.buyTo !== null ? ` · 等到 ${formatPlanPrice(plan.buyTo, stock)}` : ''}
+      {` · 首笔 ${plan.firstLotPct}`}
+    </p>
   )
 }
 
