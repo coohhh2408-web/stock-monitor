@@ -312,7 +312,11 @@ export function runValueSkill(
     gates,
     knownProfile: Boolean(known),
     nextDataNeeded: financials
-      ? ['年报原文与 MD&A', '利息覆盖倍数', '第二独立数据源（信息级才能到 A）']
+      ? [
+          '年报原文与 MD&A',
+          ...(financials.interestCoverage == null ? ['利息覆盖倍数'] : []),
+          '第二独立数据源（信息级才能到 A；瀑布备源不算双源核对）',
+        ]
       : ['最新报告期经营现金流', '资产负债率与流动比率', '年报原文', '第二独立数据源'],
   }
 }
@@ -342,21 +346,32 @@ function gateDebt(kind: BusinessKind, period: FinancialPeriod | null | undefined
   }
   const debt = period.debtRatio
   const current = period.currentRatio
-  if (debt === null && current === null) {
+  const cover = period.interestCoverage
+  if (debt === null && current === null && cover === null) {
     return pack(6, 'unknown', `${period.reportName}没有可用的杠杆数据。`)
   }
   const bits = [
     debt !== null ? `资产负债率 ${debt.toFixed(0)}%` : null,
     current !== null ? `流动比率 ${current.toFixed(2)}` : null,
+    cover !== null ? `利息覆盖 ${cover.toFixed(1)} 倍` : null,
   ].filter(Boolean)
   const prefix = `${period.reportName}：${bits.join('，')}。`
-  if ((debt !== null && debt >= 70) || (current !== null && current < 1)) {
+  if ((debt !== null && debt >= 70) || (current !== null && current < 1) || (cover !== null && cover < 2)) {
     return pack(6, 'no', `${prefix}最差情景下缓冲不够。`)
   }
-  if (debt !== null && debt <= 45 && (current === null || current >= 1.5)) {
-    return pack(6, 'yes', `${prefix}杠杆不算激进，仍缺利息覆盖。`)
+  if (debt !== null && debt <= 45 && (current === null || current >= 1.5) && (cover === null || cover >= 4)) {
+    return pack(6, 'yes', `${prefix}杠杆不算激进。`)
   }
-  return pack(6, 'unknown', `${prefix}杠杆中等，没有利息覆盖就不做最差情景。`)
+  if (cover !== null && cover >= 5 && (debt === null || debt < 70) && (current === null || current >= 1)) {
+    return pack(6, 'yes', `${prefix}利息覆盖够用，杠杆中等仍要自己看行业最差情景。`)
+  }
+  return pack(
+    6,
+    'unknown',
+    cover === null
+      ? `${prefix}杠杆中等，没有利息覆盖就不做最差情景。`
+      : `${prefix}杠杆中等，利息覆盖不够用来下结论。`,
+  )
 }
 
 function gateCircle(kind: BusinessKind, known: QualNotes | null, kindLabel: string): SkillGate {

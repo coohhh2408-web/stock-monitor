@@ -1,5 +1,6 @@
 import { usesDevProxy } from '@/lib/devProxy'
 import { loadScript } from '@/lib/jsonp'
+import { md5OfSha1Hex } from '@/lib/md5'
 import { formatListedCode } from '@/lib/utils'
 import type { AnnouncementItem, QuoteItem, SentimentTag } from '@/types/market'
 
@@ -177,6 +178,59 @@ async function fetchWallstreetcnFlash(quotes: QuoteItem[]): Promise<Announcement
   return []
 }
 
+/** 财联社电报：本地签名零 key，无 CORS，只在开发代理下拉。 */
+async function fetchClsTelegraph(quotes: QuoteItem[]): Promise<AnnouncementItem[]> {
+  if (!usesDevProxy()) return []
+  const params: Record<string, string> = {
+    appName: 'CailianpressWeb',
+    last_time: '',
+    os: 'web',
+    refresh_type: '1',
+    rn: '20',
+    sv: '7.7.5',
+  }
+  const qs = Object.keys(params)
+    .sort()
+    .map((k) => `${k}=${params[k]}`)
+    .join('&')
+  const sign = await md5OfSha1Hex(qs)
+  const path = `/v1/roll/get_roll_list?${qs}&sign=${sign}`
+  try {
+    const payload = await readJson<{
+      errno?: number | string
+      data?: {
+        roll_data?: Array<{
+          id?: number
+          title?: string
+          brief?: string
+          content?: string
+          ctime?: number
+          shareurl?: string
+          jumpUrl?: string
+        }>
+      }
+    }>(`/cls${path}`)
+    if (String(payload.errno ?? '0') !== '0') return []
+    return (payload.data?.roll_data ?? [])
+      .map((row) => {
+        const title = (row.title || row.brief || row.content || '').replace(/<[^>]+>/g, '').trim()
+        return {
+          id: `cls-${row.id ?? title.slice(0, 24)}`,
+          title,
+          date: formatNewsTime(row.ctime ?? Date.now()),
+          type: 'news' as const,
+          sentiment: inferSentiment(title),
+          tag: extractTag(title, quotes),
+          url: row.shareurl || row.jumpUrl || (row.id ? `https://www.cls.cn/detail/${row.id}` : undefined),
+          summary: (row.brief || row.content || title).replace(/<[^>]+>/g, '').trim(),
+        }
+      })
+      .filter((item) => item.title)
+  } catch {
+    return []
+  }
+}
+
 export async function fetchFlashNews(quotes: QuoteItem[] = []): Promise<AnnouncementItem[]> {
   try {
     const rows = await fetchKuaixunRaw()
@@ -185,6 +239,9 @@ export async function fetchFlashNews(quotes: QuoteItem[] = []): Promise<Announce
   } catch {
     /* next source */
   }
+
+  const cls = await fetchClsTelegraph(quotes)
+  if (cls.length > 0) return cls
 
   const wscn = await fetchWallstreetcnFlash(quotes)
   if (wscn.length > 0) return wscn

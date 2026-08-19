@@ -254,22 +254,12 @@ function EarningsCard({
       </article>
     )
   }
-  if (stock.market === 'us-stock') {
-    return (
-      <article className="rounded-2xl border border-black/[0.06] bg-white px-4 py-6">
-        <p className="text-[14px] font-semibold text-neutral-800">美股财报还没接到同一路 F10</p>
-        <p className="text-[13px] text-neutral-500 mt-2 leading-relaxed">
-          缺数就标未知，不拿盘口编经营现金流。A 股和港股打开后会同步最新年报/半年报/季报。
-        </p>
-      </article>
-    )
-  }
   if (stock.market === 'futures' || !brief || !pack) {
     return (
       <article className="rounded-2xl border border-black/[0.06] bg-white px-4 py-6">
         <p className="text-[14px] font-semibold text-neutral-800">这一期财报还没拉到</p>
         <p className="text-[13px] text-neutral-500 mt-2 leading-relaxed">
-          东方财富 F10 没有可用的主要指标时，不解读。未知不能填成结论。
+          东财 datacenter、同花顺三表和 F10 都没有可用主要指标时，不解读。未知不能填成结论。
         </p>
       </article>
     )
@@ -523,8 +513,8 @@ function ProvenanceNote() {
       {open && (
         <div className="mt-2 space-y-2 text-[12px] text-neutral-600 leading-relaxed">
           <p>清单按本产品的《价值清单 skill》执行：先过八道关，缺数据就标未知，未知不等于不通过。</p>
-          <p>市盈率来自上方同一路盘口。最新年报/半年报/季报来自东方财富 F10 主要指标，和上方财报条同一路。不是年报原文，也没有电话会。</p>
-          <p>赚钱质量看经营现金流÷净利；负债安全看资产负债率和流动比率。金融股不硬套普通企业杠杆。</p>
+          <p>市盈率来自上方同一路盘口。最新年报/半年报/季报优先来自东方财富 datacenter（浏览器可直连），A 股再备同花顺财务报表；开发环境仍可能走 F10 代理。和上方财报条同一路。不是年报原文，也没有电话会。雪球深度数据需要登录，本产品不接。</p>
+          <p>赚钱质量看经营现金流÷净利；负债安全看资产负债率、流动比率，有则加上利息覆盖。金融股不硬套普通企业杠杆。</p>
           <p>三人财报解读是同一组数字的三种框架，不是大师原话。没有 MD&A 就不判断管理层是否坦诚。</p>
           <p>习惯买点 = 现价 ×（该行业习惯市盈率 ÷ 当前市盈率）。巴菲特/芒格/段永平只是同一公式的三种宽严，不是三人原话或持仓。</p>
           <p>结构借鉴了开源研究流程的写法（两分钟筛选、信息分级、数字用代码算）。不是微调了巴菲特模型，也不是股东信摘要。</p>

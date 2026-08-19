@@ -89,7 +89,7 @@ export function InfoCenter({
       ) : (
         <div className="grid grid-cols-2 gap-4 items-start">
           <div>
-            <p className="text-[12px] font-medium text-neutral-500 mb-2 px-0.5">自选资讯 · F10 / 研报</p>
+            <p className="text-[12px] font-medium text-neutral-500 mb-2 px-0.5">自选资讯 · 公告/快讯</p>
             <NewsFeed
               items={watchlist.slice(0, 10)}
               loading={loading}

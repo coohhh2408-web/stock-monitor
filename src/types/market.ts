@@ -43,6 +43,8 @@ export interface FinancialPeriod {
   profitYoy: number | null
   eps: number | null
   ocfPerShare: number | null
+  /** 经营活动现金流净额（元） */
+  operatingCashFlow: number | null
   /** 经营现金流 / 营业收入，0–1 */
   ocfToRevenue: number | null
   salesCashToRevenue: number | null
@@ -51,6 +53,8 @@ export interface FinancialPeriod {
   roe: number | null
   debtRatio: number | null
   currentRatio: number | null
+  /** 利息保障倍数；没有就保持未知 */
+  interestCoverage: number | null
   quickRatio: number | null
   cashRatio: number | null
   arDays: number | null
