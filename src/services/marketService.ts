@@ -136,6 +136,7 @@ export async function generateAIDiagnosis(stock: QuoteItem): Promise<AIDiagnosis
     anomalySummary: defaultAnomaly,
     buffettSummary: sage.buffett.summary,
     mungerSummary: sage.munger.summary,
+    duanSummary: sage.duan.summary,
   }
 }
 

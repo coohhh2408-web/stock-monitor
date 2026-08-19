@@ -1,3 +1,4 @@
+import { usesDevProxy } from '@/lib/devProxy'
 import { toEastMoneySecid } from '@/services/symbolMap'
 import type { ChartPeriod, KlineBar, QuoteItem } from '@/types/market'
 
@@ -26,10 +27,6 @@ const PERIOD_KLT: Record<Exclude<ChartPeriod, 'intraday' | '5d'>, number> = {
   day: 101,
   week: 102,
   month: 103,
-}
-
-function usesDevProxy(): boolean {
-  return typeof window !== 'undefined' && window.location.port === '5173'
 }
 
 function num(value: unknown): number | null {

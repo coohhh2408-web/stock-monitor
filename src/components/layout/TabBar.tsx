@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { lightTap } from '@/lib/nativeInit'
 import type { AppTab } from '@/types/features'
 
 const TABS: { value: AppTab; label: string; icon: (active: boolean) => ReactNode }[] = [
@@ -51,14 +52,17 @@ interface TabBarProps {
 
 export function TabBar({ active, onChange }: TabBarProps) {
   return (
-    <nav className="ios-tab-bar fixed bottom-0 left-0 right-0 z-40">
+    <nav className="ios-tab-bar fixed bottom-0 left-0 right-0 z-40 bg-[#F2F2F7] border-t border-black/10">
       <div className="flex items-stretch justify-around max-w-lg mx-auto">
         {TABS.map(({ value, label, icon }) => {
           const isActive = active === value
           return (
             <button
               key={value}
-              onClick={() => onChange(value)}
+              onClick={() => {
+                void lightTap()
+                onChange(value)
+              }}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 min-h-[49px] transition-colors',
                 isActive ? 'text-[#007AFF]' : 'text-[#8E8E93]',

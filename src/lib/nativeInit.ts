@@ -1,5 +1,19 @@
+import { Keyboard } from '@capacitor/keyboard'
+import { App } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { StatusBar, Style } from '@capacitor/status-bar'
+
+export const APP_RESUME_EVENT = 'app-resume'
+
+export async function lightTap(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await Haptics.impact({ style: ImpactStyle.Light })
+  } catch {
+    /* web or simulator without haptics */
+  }
+}
 
 export async function initNativeApp(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
@@ -15,6 +29,16 @@ export async function initNativeApp(): Promise<void> {
       await StatusBar.setOverlaysWebView({ overlay: true })
     }
   } catch {
-    // optional
+    // optional on web preview
   }
+
+  try {
+    await Keyboard.setAccessoryBarVisible({ isVisible: false })
+  } catch {
+    /* plugin missing in web */
+  }
+
+  void App.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) window.dispatchEvent(new Event(APP_RESUME_EVENT))
+  })
 }

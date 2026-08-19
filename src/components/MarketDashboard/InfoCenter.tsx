@@ -32,16 +32,18 @@ export function InfoCenter({
 
     const load = async () => {
       try {
-        const [watch, live] = await Promise.all([
+        const [watch, live] = await Promise.allSettled([
           fetchWatchlistNews(quotes),
           fetchFlashNews(quotes),
         ])
         if (cancelled) return
-        setWatchlist(watch.slice(0, 12))
-        setFlash(live.slice(0, 16))
-        setUpdatedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
-      } catch {
-        if (!cancelled) setFlash([])
+        if (watch.status === 'fulfilled') setWatchlist(watch.value.slice(0, 12))
+        if (live.status === 'fulfilled') {
+          setFlash(live.value.slice(0, 16))
+          if (live.value.length > 0) {
+            setUpdatedAt(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -87,7 +89,7 @@ export function InfoCenter({
       ) : (
         <div className="grid grid-cols-2 gap-4 items-start">
           <div>
-            <p className="text-[12px] font-medium text-neutral-500 mb-2 px-0.5">自选资讯 · F10 / 研报</p>
+            <p className="text-[12px] font-medium text-neutral-500 mb-2 px-0.5">自选资讯 · 公告/快讯</p>
             <NewsFeed
               items={watchlist.slice(0, 10)}
               loading={loading}

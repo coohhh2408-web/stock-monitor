@@ -11,6 +11,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    allowedHosts: true,
     proxy: {
       '/em-qt': {
         target: 'https://push2.eastmoney.com',
@@ -36,6 +37,17 @@ export default defineConfig({
         target: 'https://zhibo.sina.com.cn',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/sina-zhibo/, ''),
+      },
+      '/cls': {
+        target: 'https://www.cls.cn',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/cls/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('referer', 'https://www.cls.cn/')
+            proxyReq.setHeader('origin', 'https://www.cls.cn')
+          })
+        },
       },
     },
   },

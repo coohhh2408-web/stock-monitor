@@ -8,7 +8,8 @@ import { SkeletonText } from '@/components/ui/Skeleton'
 import { cn, formatPrice, getChangeColor } from '@/lib/utils'
 import { fetchFlashNews, fetchStockNews } from '@/services/newsApi'
 import { fetchChartSeries, fetchQuoteSnapshot } from '@/services/klineApi'
-import type { QuoteItem, AIDiagnosisStub, AnnouncementItem, ChartPeriod, KlineBar } from '@/types/market'
+import { fetchFinancials } from '@/services/financialsApi'
+import type { QuoteItem, AIDiagnosisStub, AnnouncementItem, ChartPeriod, FinancialsPack, KlineBar } from '@/types/market'
 
 type DetailTab = 'ai' | 'news24h' | 'reports'
 
@@ -46,6 +47,8 @@ export function StockDetailPanel({
   const [bars, setBars] = useState<KlineBar[]>([])
   const [prevClose, setPrevClose] = useState<number | undefined>()
   const [chartLoading, setChartLoading] = useState(false)
+  const [financials, setFinancials] = useState<FinancialsPack | null>(null)
+  const [financialsStatus, setFinancialsStatus] = useState<'loading' | 'ready' | 'empty'>('empty')
 
   useEffect(() => {
     if (isOpen) {
@@ -96,6 +99,27 @@ export function StockDetailPanel({
       cancelled = true
     }
   }, [isOpen, stock?.code])
+
+  useEffect(() => {
+    if (!isOpen || !stock) return
+    let cancelled = false
+    setFinancials(null)
+    setFinancialsStatus('loading')
+    void fetchFinancials(stock)
+      .then((pack) => {
+        if (cancelled) return
+        setFinancials(pack)
+        setFinancialsStatus(pack ? 'ready' : 'empty')
+      })
+      .catch(() => {
+        if (cancelled) return
+        setFinancials(null)
+        setFinancialsStatus('empty')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, stock?.code, stock?.market])
 
   useEffect(() => {
     if (!isOpen || !stock) return
@@ -213,7 +237,7 @@ export function StockDetailPanel({
         />
 
         <div className="mb-4 shrink-0">
-          <QuoteStatsGrid stock={display} />
+          <QuoteStatsGrid stock={display} financials={financials} />
         </div>
 
         <SegmentedControl
@@ -231,7 +255,7 @@ export function StockDetailPanel({
         <div className="relative min-h-[160px]">
           {tab === 'ai' && (
             <div>
-              <BuffettMungerBrief stock={display} />
+              <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} />
               {aiDiagnosis.status === 'loading' ? (
                 <div className="ai-glow-card">
                   <SkeletonText lines={4} />
