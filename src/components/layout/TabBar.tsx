@@ -51,7 +51,7 @@ interface TabBarProps {
 
 export function TabBar({ active, onChange }: TabBarProps) {
   return (
-    <nav className="ios-tab-bar fixed bottom-0 left-0 right-0 z-40">
+    <nav className="ios-tab-bar fixed bottom-0 left-0 right-0 z-40 bg-[#F2F2F7] border-t border-black/10">
       <div className="flex items-stretch justify-around max-w-lg mx-auto">
         {TABS.map(({ value, label, icon }) => {
           const isActive = active === value

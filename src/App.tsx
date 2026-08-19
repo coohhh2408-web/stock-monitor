@@ -126,7 +126,7 @@ function AppShell() {
         </header>
       )}
 
-      <main className={`flex-1 mx-auto w-full ios-main-content ${isMobile ? 'max-w-2xl px-4 py-4' : 'max-w-[1180px] px-6 pb-10'}`}>
+      <main className={`flex-1 mx-auto w-full ios-main-content ${isMobile ? 'max-w-2xl px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+88px)]' : 'max-w-[1180px] px-6 pb-10'}`}>
         {isMobile ? (
           <>
             {activeTab === 'market' && <MarketDashboard isMobile />}
