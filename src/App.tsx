@@ -57,6 +57,11 @@ function AppShell() {
   const isMobile = useIsMobileLayout()
   const statusTime = useStatusClock()
 
+  const selectTab = (tab: AppTab) => {
+    setActiveTab(tab)
+    window.history.replaceState(null, '', `#${tab}`)
+  }
+
   const tabTitles: Record<AppTab, string> = {
     market: '行情',
     position: '持仓',
@@ -137,10 +142,7 @@ function AppShell() {
           <div className="workspace-glass px-7 py-6">
             <DesktopTabBar
               value={activeTab}
-              onChange={(tab) => {
-                setActiveTab(tab)
-                window.history.replaceState(null, '', `#${tab}`)
-              }}
+              onChange={selectTab}
             />
             {activeTab === 'market' && <MarketDashboard />}
             {activeTab === 'position' && <PositionPnL />}
@@ -149,7 +151,7 @@ function AppShell() {
         )}
       </main>
 
-      {isMobile && <TabBar active={activeTab} onChange={setActiveTab} />}
+      {isMobile && <TabBar active={activeTab} onChange={selectTab} />}
 
       <SettingsPanel
         isOpen={settingsOpen}

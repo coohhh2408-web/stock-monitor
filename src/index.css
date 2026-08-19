@@ -60,7 +60,22 @@
     z-index: 1;
   }
 
-  /* iOS safe area */
+  html.ios-native {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .ios-native body {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    overscroll-behavior-y: none;
+  }
+
+  .ios-native input,
+  .ios-native textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
   .ios-native .ios-header {
     padding-top: env(safe-area-inset-top, 0px);
   }

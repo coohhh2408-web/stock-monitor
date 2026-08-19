@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * 在 Mac 本机把 iOS 模拟器/真机接到 Vite。
- * 云环境和 Linux 没有 Xcode，脚本会打印拉分支命令后退出。
+ * 在 Mac 本机：必要时启动 Vite，sync 热加载地址，然后 cap run 打开模拟器。
+ * Linux / 云环境没有 Xcode，只打印拉分支说明。
  */
 import os from 'node:os'
 import { spawn } from 'node:child_process'
@@ -50,50 +50,66 @@ async function viteUp(url) {
   }
 }
 
+async function waitForVite(urls, ms = 25000) {
+  const started = Date.now()
+  while (Date.now() - started < ms) {
+    for (const url of urls) {
+      if (await viteUp(url)) return true
+    }
+    await new Promise((r) => setTimeout(r, 400))
+  }
+  return false
+}
+
+function startVite() {
+  const child = spawn('npm', ['run', 'dev'], {
+    cwd: process.cwd(),
+    detached: true,
+    stdio: 'ignore',
+  })
+  child.unref()
+}
+
 const macHelp = `
-请在 Mac 上用 Cursor 打开本仓库，然后：
+请在 Mac 上用 Cursor 打开本仓库：
 
-  git fetch origin
-  git checkout ${BRANCH}
-  git pull origin ${BRANCH}
-  npm install
-
-终端 1：
-  npm run dev
-
-终端 2（模拟器，同一台 Mac）：
+  git fetch origin && git checkout ${BRANCH} && git pull && npm install
   npm run ios:local
-
-真机（iPhone 与 Mac 同一 Wi-Fi）：
-  npm run ios:device
-
-网页还没定型：改 src/ 即可，不要在 Swift 里复制页面。
 `.trim()
 
 if (process.platform !== 'darwin') {
-  console.log(`当前系统是 ${process.platform}，没有 Xcode，不能在这里跑 iOS。\n`)
+  console.log(`当前系统是 ${process.platform}，没有 Xcode，不能在这里点 Run。\n`)
   console.log(macHelp)
   process.exit(1)
 }
 
 const host = DEVICE ? lanIPv4() : '127.0.0.1'
 if (DEVICE && !host) {
-  console.error('找不到局域网 IP。连上 Wi-Fi 后再试，或手动设置：')
-  console.error('  CAP_SERVER_URL=http://192.168.x.x:5173 npm run ios:live')
+  console.error('找不到局域网 IP。连上 Wi-Fi 后再试。')
   process.exit(1)
 }
 
 const url = `http://${host}:5173`
-if (!(await viteUp(url)) && !(await viteUp('http://127.0.0.1:5173'))) {
-  console.error('没检测到 Vite。请先在另一个终端运行：\n  npm run dev\n然后再执行本命令。')
-  process.exit(1)
+const probes = DEVICE ? [url, 'http://127.0.0.1:5173'] : ['http://127.0.0.1:5173']
+
+if (!(await waitForVite(probes, 2000))) {
+  console.log('没检测到 Vite，正在后台启动 npm run dev …')
+  startVite()
+  if (!(await waitForVite(probes))) {
+    console.error('Vite 没起来。请手动开一个终端运行 npm run dev 后再试。')
+    process.exit(1)
+  }
 }
 
 console.log(DEVICE ? `真机热加载 → ${url}` : `模拟器热加载 → ${url}`)
-console.log('正在 cap sync（会把地址写进 iOS 工程，不要把 IP 提交进 git）…')
-
+console.log('正在 cap sync …')
 await run('npx', ['cap', 'sync', 'ios'], { CAP_SERVER_URL: url })
-await run('npx', ['cap', 'open', 'ios'])
 
-console.log('\n在 Xcode 选模拟器或你的 iPhone，点 Run。')
-console.log('改 React 保存后，App 里刷新即可，一般不必再 sync。')
+if (DEVICE) {
+  await run('npx', ['cap', 'open', 'ios'])
+  console.log('\nXcode 顶部选你的 iPhone，点 Run。第一次请允许本地网络。')
+  process.exit(0)
+}
+
+console.log('正在启动模拟器（cap run）…')
+await run('npx', ['cap', 'run', 'ios', '--no-sync'])

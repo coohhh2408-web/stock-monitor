@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   appName: '到价提醒',
   webDir: 'dist',
   ios: {
-    contentInset: 'automatic',
+    contentInset: 'never',
     preferredContentMode: 'mobile',
     backgroundColor: '#F2F2F7',
   },
@@ -28,6 +28,10 @@ const config: CapacitorConfig = {
   plugins: {
     CapacitorHttp: {
       enabled: true,
+    },
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true,
     },
     StatusBar: {
       style: 'LIGHT',

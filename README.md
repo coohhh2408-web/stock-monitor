@@ -13,14 +13,13 @@ git pull origin cursor/ios-native-shell-6f09
 npm install
 ```
 
-两个终端：
+两个终端也可以，一条命令更省事：
 
 ```bash
-npm run dev          # 终端 1：网页 + 代理，保持开着
-npm run ios:local    # 终端 2：模拟器热加载（127.0.0.1:5173），然后 Xcode Run
+npm run ios:local    # 没有 Vite 会自己拉起，然后 cap run 打开模拟器
 ```
 
-iPhone 真机（和 Mac 同一 Wi-Fi）：先 `npm run dev`，再 `npm run ios:device`。
+iPhone 真机（同一 Wi-Fi）：`npm run ios:device`，再在 Xcode 里选手机点 Run。
 
 改 `src/` 保存即可在 App 里看到。不要在 Swift 里复制行情 / 清单 / 财报。网页功能还没做完，原生只留壳。
 
