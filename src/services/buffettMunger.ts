@@ -14,7 +14,7 @@ export interface BuffettMungerBrief {
   munger: SageTake
 }
 
-type BusinessKind =
+export type BusinessKind =
   | 'consumer-franchise'
   | 'bank'
   | 'insurance'
@@ -304,7 +304,7 @@ function take(
   return { author, lens, stance, summary }
 }
 
-function inferBusinessKind(stock: QuoteItem): BusinessKind {
+export function inferBusinessKind(stock: QuoteItem): BusinessKind {
   if (stock.market === 'futures') return 'futures'
   const text = `${stock.name} ${stock.industry ?? ''}`.toLowerCase()
   const hit = (keywords: string[]) => keywords.some((k) => text.includes(k.toLowerCase()))
@@ -441,7 +441,7 @@ function industryHint(stock: QuoteItem): string {
 }
 
 function describeValuation(stock: QuoteItem): string {
-  const pe = effectivePe(stock)
+  const pe = getEffectivePe(stock)
   const pb = stock.pb
   if (pe === null && (pb === undefined || pb <= 0)) return ''
   if (pe !== null && pe < 0) return `目前盈利为负，谈市盈率没有意义，更要看现金会不会烧穿。`
@@ -461,7 +461,7 @@ function describeValuation(stock: QuoteItem): string {
 }
 
 function valuationClause(stock: QuoteItem): { buffett: string; munger: string } | null {
-  const pe = effectivePe(stock)
+  const pe = getEffectivePe(stock)
   if (pe === null || pe <= 0) return null
   if (pe < 12) {
     return {
@@ -478,7 +478,7 @@ function valuationClause(stock: QuoteItem): { buffett: string; munger: string } 
   return null
 }
 
-function effectivePe(stock: QuoteItem): number | null {
+export function getEffectivePe(stock: QuoteItem): number | null {
   const pe = stock.pe ?? stock.peTtm
   if (pe === undefined || !Number.isFinite(pe) || pe === 0) return null
   return pe
