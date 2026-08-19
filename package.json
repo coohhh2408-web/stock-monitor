@@ -1,0 +1,40 @@
+{
+  "name": "stock-monitor",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "ios:add": "mkdir -p ios && tar -xzf node_modules/@capacitor/cli/assets/ios-spm-template.tar.gz -C ios",
+    "ios:build": "npm run build && npx cap sync ios",
+    "ios:open": "npx cap open ios",
+    "ios:run": "npm run ios:build && npx cap run ios --target 5F918D1F-4593-400A-BC9F-687DEF4EB118",
+    "cap:sync": "npx cap sync",
+    "setup:supabase": "bash scripts/setup-supabase.sh",
+    "setup:env": "node scripts/write-env.mjs",
+    "verify:sync": "node scripts/verify-sync.mjs"
+  },
+  "dependencies": {
+    "@capacitor/app": "^7.0.1",
+    "@capacitor/core": "^7.0.1",
+    "@capacitor/ios": "^7.0.1",
+    "@capacitor/status-bar": "^7.0.1",
+    "clsx": "^2.1.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "supabase": "^2.115.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5"
+  }
+}
