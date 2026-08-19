@@ -18,6 +18,7 @@ import {
   type GateState,
   type ValueChecklist,
 } from '@/services/valueChecklist'
+import { answerLabel, type GateAnswer, type InfoRichness } from '@/services/valueSkill'
 import type { QuoteItem } from '@/types/market'
 
 type SageView = 'list' | 'research'
@@ -36,7 +37,7 @@ export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
       <div className="flex items-end justify-between gap-3 mb-2.5">
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-neutral-800">价值清单</p>
-          <p className="text-[11px] text-neutral-400 mt-0.5">算买点，不扮演大师</p>
+          <p className="text-[11px] text-neutral-400 mt-0.5">按咱们自己的 skill 算买点，不扮演大师</p>
         </div>
       </div>
       <SegmentedControl
@@ -116,6 +117,8 @@ function ChecklistCard({ brief, stock }: { brief: ValueChecklist; stock: QuoteIt
         ))}
       </ul>
 
+      <EightGates brief={brief} />
+
       <div className="px-4 py-3 border-t border-neutral-100">
         <p className="text-[11px] font-medium text-neutral-400 mb-2">三种习惯买点（同一公式，宽严不同）</p>
         <ul className="space-y-2">
@@ -133,6 +136,55 @@ function ChecklistCard({ brief, stock }: { brief: ValueChecklist; stock: QuoteIt
         </ul>
       </div>
     </article>
+  )
+}
+
+function EightGates({ brief }: { brief: ValueChecklist }) {
+  const skill = brief.skill
+  return (
+    <div className="px-4 py-3 border-t border-neutral-100 bg-neutral-50/50">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <p className="text-[11px] font-medium text-neutral-400">八道关</p>
+        <RichnessChip richness={skill.richness} />
+      </div>
+      <p className="text-[12px] text-neutral-600 leading-relaxed mb-2">{skill.filterNote}</p>
+      <ul className="space-y-2">
+        {skill.gates.map((item) => (
+          <li key={item.id} className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[13px] text-neutral-800">
+                <span className="text-neutral-400 tabular mr-1.5">{item.id}</span>
+                {item.dimension}
+              </p>
+              <p className="text-[11px] text-neutral-500 leading-relaxed mt-0.5">{item.note}</p>
+            </div>
+            <AnswerChip answer={item.answer} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function RichnessChip({ richness }: { richness: InfoRichness }) {
+  return (
+    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white text-neutral-500 border border-black/[0.04]">
+      信息 {richness} 级
+    </span>
+  )
+}
+
+function AnswerChip({ answer }: { answer: GateAnswer }) {
+  const color =
+    answer === 'yes'
+      ? 'bg-emerald-50 text-emerald-700'
+      : answer === 'no'
+        ? 'bg-amber-50 text-amber-700'
+        : 'bg-neutral-100 text-neutral-500'
+  return (
+    <span className={cn('text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0', color)}>
+      {answerLabel(answer)}
+    </span>
   )
 }
 
@@ -376,8 +428,10 @@ function ProvenanceNote() {
       </button>
       {open && (
         <div className="mt-2 space-y-2 text-[12px] text-neutral-600 leading-relaxed">
+          <p>清单按本产品的《价值清单 skill》执行：先过八道关，缺数据就标未知，未知不等于不通过。</p>
           <p>市盈率来自上方同一路盘口。生意类型按名称/行业关键词归类，不是年报阅读。</p>
           <p>习惯买点 = 现价 ×（该行业习惯市盈率 ÷ 当前市盈率）。巴菲特/芒格/段永平只是同一公式的三种宽严，不是三人原话或持仓。</p>
+          <p>结构借鉴了开源研究流程的写法（两分钟筛选、信息分级、数字用代码算）。不是微调了巴菲特模型，也不是股东信摘要。</p>
           <p>缺市盈率就不报价。这不是内在价值，也不能当投顾建议。收费卖的是清单和提醒，不是荐股。</p>
         </div>
       )}

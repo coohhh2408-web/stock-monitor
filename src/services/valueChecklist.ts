@@ -1,6 +1,7 @@
 import { formatQuotePrice } from '@/lib/utils'
 import { inferBusinessKind, type BusinessKind } from '@/services/buffettMunger'
 import { buildSagePlan, getStockPe, PE_BAND } from '@/services/sagePlan'
+import { runValueSkill, type ValueSkillRun } from '@/services/valueSkill'
 import type { QuoteItem } from '@/types/market'
 
 export type ChecklistVerdict = 'in-band' | 'wait' | 'skip' | 'no-data'
@@ -33,6 +34,7 @@ export interface ValueChecklist {
   formula: string
   gates: ChecklistGate[]
   lenses: HabitLens[]
+  skill: ValueSkillRun
 }
 
 const KIND_LABEL: Record<BusinessKind, string> = {
@@ -67,6 +69,11 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
     peNow !== null && peNow > 0 && peHabit !== null
       ? roundMoney(stock.price * (peHabit / peNow), stock.price)
       : null
+  const skill = runValueSkill(
+    stock,
+    kindLabel,
+    peNow !== null && peHabit !== null ? peNow <= peHabit : null,
+  )
 
   const lenses: HabitLens[] = (
     [
@@ -102,6 +109,7 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
         gate('data', '数据', peNow ? 'pass' : 'warn', peNow ? `现 ${peNow.toFixed(0)}x` : '无市盈率'),
       ],
       lenses,
+      skill,
     })
   }
 
@@ -123,6 +131,7 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
         gate('data', '数据', 'fail', '缺市盈率'),
       ],
       lenses,
+      skill,
     })
   }
 
@@ -153,6 +162,7 @@ export function buildValueChecklist(stock: QuoteItem): ValueChecklist {
       gate('data', '数据', 'pass', '与上方盘口同一路市盈率'),
     ],
     lenses,
+    skill,
   })
 }
 
