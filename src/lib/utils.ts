@@ -42,16 +42,42 @@ export function formatCurrency(value: number): string {
   return `${sign}¥${Math.abs(value).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-export function formatLargeNumber(value: number): string {
-  if (Math.abs(value) >= 1e8) return `${(value / 1e8).toFixed(2)}亿`
-  if (Math.abs(value) >= 1e4) return `${(value / 1e4).toFixed(2)}万`
-  return value.toLocaleString('zh-CN')
+export function formatLargeNumber(value: number, digits = 2): string {
+  const abs = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+  if (abs >= 1e12) return `${sign}${(abs / 1e12).toFixed(digits)}万亿`
+  if (abs >= 1e8) return `${sign}${(abs / 1e8).toFixed(digits)}亿`
+  if (abs >= 1e4) return `${sign}${(abs / 1e4).toFixed(digits)}万`
+  return `${sign}${abs.toLocaleString('zh-CN', { maximumFractionDigits: digits })}`
+}
+
+export function formatDash(value: number | undefined | null, digits = 2): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—'
+  return value.toFixed(digits)
+}
+
+export function formatVolume(value: number | undefined, market?: string): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—'
+  const unit = market === 'a-share' ? '手' : '股'
+  return `${formatLargeNumber(value)}${unit}`
+}
+
+export function formatAmount(value: number | undefined, market?: string): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—'
+  const unit = market === 'us-stock' ? '美元' : '元'
+  return `${formatLargeNumber(value)}${unit}`
+}
+
+export function formatMarketCap(value: number | undefined, market?: string): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) return '—'
+  const unit = market === 'us-stock' ? '美元' : '元'
+  return `${formatLargeNumber(value)}${unit}`
 }
 
 export function getChangeColor(change: number): string {
   if (change > 0) return 'text-apple-red'
   if (change < 0) return 'text-apple-green'
-  return 'text-apple-gray-500'
+  return 'text-neutral-500'
 }
 
 export function getChangeBgColor(change: number): string {

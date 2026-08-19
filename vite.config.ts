@@ -17,6 +17,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/em-qt/, ''),
       },
+      '/em-his': {
+        target: 'https://push2his.eastmoney.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/em-his/, ''),
+      },
       '/em-kuaixun': {
         target: 'https://newsapi.eastmoney.com',
         changeOrigin: true,

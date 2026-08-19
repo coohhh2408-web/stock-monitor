@@ -52,7 +52,6 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
   }
 
   const aiDiagnosis = selectedStock ? getAIDiagnosis(selectedStock) : { status: 'idle' as const }
-  const sparkline = selectedStock ? getSparkline(selectedStock.code, selectedStock.price) : []
 
   const showEmptyHint = filteredQuotes.length === 0 && searchQuery.trim().length > 0
   const cardVariant = isMobile ? 'list' : 'grid'
@@ -150,7 +149,6 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
       <StockDetailPanel
         isOpen={panelOpen}
         stock={selectedStock}
-        sparkline={sparkline}
         aiDiagnosis={aiDiagnosis}
         onClose={() => setPanelOpen(false)}
         onGenerateAI={() => selectedStock && generateAI(selectedStock)}

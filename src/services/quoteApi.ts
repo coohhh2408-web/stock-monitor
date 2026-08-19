@@ -52,6 +52,18 @@ export function mergeLiveQuote(base: QuoteItem, live: Partial<QuoteItem>): Quote
     high: live.high ?? Math.max(base.high, price),
     low: live.low ?? Math.min(base.low, price),
     volume: live.volume ?? base.volume,
+    amount: live.amount ?? base.amount,
+    turnover: live.turnover ?? base.turnover,
+    pe: live.pe ?? base.pe,
+    peTtm: live.peTtm ?? base.peTtm,
+    pb: live.pb ?? base.pb,
+    marketCap: live.marketCap ?? base.marketCap,
+    circMarketCap: live.circMarketCap ?? base.circMarketCap,
+    amplitude: live.amplitude ?? base.amplitude,
+    volumeRatio: live.volumeRatio ?? base.volumeRatio,
+    limitUp: live.limitUp ?? base.limitUp,
+    limitDown: live.limitDown ?? base.limitDown,
+    industry: live.industry ?? base.industry,
     prevClose,
     updatedAt: live.updatedAt ?? new Date().toISOString(),
     secid: live.secid ?? base.secid,
@@ -138,6 +150,9 @@ async function fetchTencentQuotes(items: QuoteItem[]): Promise<Partial<QuoteItem
     } catch {
       /* ignore */
     }
+    const amountWan = num(p[37])
+    const circYi = num(p[44])
+    const capYi = num(p[45])
     result.push({
       code: q.code,
       name: p[1] || q.name,
@@ -150,6 +165,16 @@ async function fetchTencentQuotes(items: QuoteItem[]): Promise<Partial<QuoteItem
       change: Math.round((price - prevClose) * 100) / 100,
       changePercent: prevClose ? Math.round(((price - prevClose) / prevClose) * 10000) / 100 : 0,
       volume: num(p[36]) ?? undefined,
+      amount: amountWan !== null ? amountWan * 1e4 : undefined,
+      turnover: num(p[38]) ?? undefined,
+      pe: num(p[39]) ?? undefined,
+      amplitude: num(p[43]) ?? undefined,
+      circMarketCap: circYi !== null ? circYi * 1e8 : undefined,
+      marketCap: capYi !== null ? capYi * 1e8 : undefined,
+      pb: num(p[46]) ?? undefined,
+      limitUp: num(p[47]) ?? undefined,
+      limitDown: num(p[48]) ?? undefined,
+      volumeRatio: num(p[49]) ?? undefined,
       updatedAt: new Date().toISOString(),
     })
   }

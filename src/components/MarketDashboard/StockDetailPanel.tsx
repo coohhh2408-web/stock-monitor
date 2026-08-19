@@ -1,18 +1,27 @@
 import { useState, useEffect } from 'react'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { ChangeCapsule, SentimentTag } from '@/components/ui/StocksPrimitives'
-import { MiniSparkline } from '@/components/ui/MiniSparkline'
+import { KlineChart } from '@/components/ui/KlineChart'
+import { QuoteStatsGrid } from './QuoteStatsGrid'
 import { SkeletonText } from '@/components/ui/Skeleton'
-import { cn, formatPrice } from '@/lib/utils'
+import { cn, formatPrice, getChangeColor } from '@/lib/utils'
 import { fetchFlashNews, fetchStockNews } from '@/services/newsApi'
-import type { QuoteItem, AIDiagnosisStub, AnnouncementItem, SparklineDataPoint } from '@/types/market'
+import { fetchChartSeries, fetchQuoteSnapshot } from '@/services/klineApi'
+import type { QuoteItem, AIDiagnosisStub, AnnouncementItem, ChartPeriod, KlineBar } from '@/types/market'
 
 type DetailTab = 'ai' | 'news24h' | 'reports'
+
+const PERIODS: { value: ChartPeriod; label: string }[] = [
+  { value: 'intraday', label: '分时' },
+  { value: '5d', label: '5日' },
+  { value: 'day', label: '日K' },
+  { value: 'week', label: '周K' },
+  { value: 'month', label: '月K' },
+]
 
 interface StockDetailPanelProps {
   isOpen: boolean
   stock: QuoteItem | null
-  sparkline: SparklineDataPoint[]
   aiDiagnosis: AIDiagnosisStub
   onClose: () => void
   onGenerateAI: () => void
@@ -22,7 +31,6 @@ interface StockDetailPanelProps {
 export function StockDetailPanel({
   isOpen,
   stock,
-  sparkline,
   aiDiagnosis,
   onClose,
   onGenerateAI,
@@ -32,12 +40,18 @@ export function StockDetailPanel({
   const [selectedNews, setSelectedNews] = useState<AnnouncementItem | null>(null)
   const [visible, setVisible] = useState(false)
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
+  const [period, setPeriod] = useState<ChartPeriod>('day')
+  const [snapshot, setSnapshot] = useState<QuoteItem | null>(null)
+  const [bars, setBars] = useState<KlineBar[]>([])
+  const [prevClose, setPrevClose] = useState<number | undefined>()
+  const [chartLoading, setChartLoading] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setVisible(true)
       setTab('ai')
       setSelectedNews(null)
+      setPeriod('day')
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
@@ -69,6 +83,42 @@ export function StockDetailPanel({
   }, [isOpen, stock?.code, stock?.name])
 
   useEffect(() => {
+    if (!isOpen || !stock) return
+    let cancelled = false
+    setSnapshot(null)
+    void fetchQuoteSnapshot(stock).then((live) => {
+      if (!cancelled) setSnapshot(live)
+    }).catch(() => {
+      if (!cancelled) setSnapshot(stock)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, stock?.code])
+
+  useEffect(() => {
+    if (!isOpen || !stock) return
+    let cancelled = false
+    setChartLoading(true)
+    setBars([])
+    void fetchChartSeries(stock, period)
+      .then((result) => {
+        if (cancelled) return
+        setBars(result.bars)
+        setPrevClose(result.prevClose)
+      })
+      .catch(() => {
+        if (!cancelled) setBars([])
+      })
+      .finally(() => {
+        if (!cancelled) setChartLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, stock?.code, period])
+
+  useEffect(() => {
     if (!isOpen) {
       const t = setTimeout(() => setVisible(false), 200)
       return () => clearTimeout(t)
@@ -84,6 +134,9 @@ export function StockDetailPanel({
 
   if (!visible || !stock) return null
 
+  const display = snapshot
+    ? { ...snapshot, price: stock.price, change: stock.change, changePercent: stock.changePercent }
+    : stock
   const newsItems = announcements.filter((a) => a.type === 'news')
   const reportItems = announcements.filter((a) => a.type === 'announcement')
   const listItems = tab === 'news24h' ? newsItems : tab === 'reports' ? reportItems : []
@@ -100,7 +153,7 @@ export function StockDetailPanel({
       <div
         className={cn(
           'apple-modal flex flex-col',
-          isMobile ? 'mobile-sheet-panel' : 'max-h-[min(85vh,680px)]',
+          isMobile ? 'mobile-sheet-panel' : 'max-h-[min(92vh,860px)]',
         )}
         onClick={(e) => e.stopPropagation()}
       >
@@ -109,16 +162,17 @@ export function StockDetailPanel({
             <div className="w-9 h-1 rounded-full bg-neutral-300" />
           </div>
         )}
-        <div className={cn('flex flex-col flex-1 min-h-0', isMobile ? 'px-5 pb-6 pt-2' : 'p-6')}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 shrink-0">
-          <div className="flex items-center gap-3">
-            <StockIcon name={stock.name} />
-            <div>
-              <h2 className="text-lg font-semibold text-neutral-900 leading-tight">{stock.name}</h2>
+        <div className={cn('flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain', isMobile ? 'px-5 pb-8 pt-2' : 'px-6 pt-6 pb-6')}>
+        <div className="flex items-center justify-between mb-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <StockIcon name={display.name} />
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-neutral-900 leading-tight truncate">{display.name}</h2>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-sm font-mono tabular text-neutral-500">{formatPrice(stock.price)}</span>
-                <ChangeCapsule change={stock.change} changePercent={stock.changePercent} />
+                <span className={cn('text-sm font-mono tabular font-medium', getChangeColor(display.change))}>
+                  {formatPrice(display.price)}
+                </span>
+                <ChangeCapsule change={display.change} changePercent={display.changePercent} />
               </div>
             </div>
           </div>
@@ -132,12 +186,35 @@ export function StockDetailPanel({
           </button>
         </div>
 
-        {/* Large sparkline preview */}
-        <div className="mb-5 shrink-0 flex justify-center py-2">
-          <MiniSparkline data={sparkline} change={stock.change} width={280} height={64} className="opacity-90" />
+        <div className="flex gap-1 mb-2 shrink-0">
+          {PERIODS.map((item) => (
+            <button
+              key={item.value}
+              onClick={() => setPeriod(item.value)}
+              className={cn(
+                'flex-1 py-1 rounded-md text-[12px] font-medium transition-colors',
+                period === item.value
+                  ? 'bg-neutral-900 text-white'
+                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200',
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
         </div>
 
-        {/* Segmented Control */}
+        <KlineChart
+          bars={bars}
+          period={period}
+          prevClose={prevClose ?? display.prevClose}
+          loading={chartLoading}
+          className="mb-3 shrink-0"
+        />
+
+        <div className="mb-4 shrink-0">
+          <QuoteStatsGrid stock={display} />
+        </div>
+
         <SegmentedControl
           options={[
             { value: 'ai' as const, label: 'AI 异动速读' },
@@ -150,10 +227,9 @@ export function StockDetailPanel({
           className="mb-4 shrink-0"
         />
 
-        {/* Tab content */}
-        <div className="flex-1 overflow-hidden relative min-h-0">
+        <div className="relative min-h-[160px]">
           {tab === 'ai' && (
-            <div className="overflow-y-auto max-h-[320px]">
+            <div>
               {aiDiagnosis.status === 'loading' ? (
                 <div className="ai-glow-card">
                   <SkeletonText lines={4} />
@@ -192,11 +268,8 @@ export function StockDetailPanel({
           )}
 
           {(tab === 'news24h' || tab === 'reports') && (
-            <div className={cn('relative overflow-hidden', isMobile ? 'max-h-[50vh]' : 'flex max-h-[320px]')}>
-              <div className={cn(
-                'overflow-y-auto transition-all duration-300',
-                !isMobile && selectedNews && 'w-1/2 opacity-60',
-              )}>
+            <div className={cn('relative', !isMobile && selectedNews && 'flex gap-3')}>
+              <div className={cn(!isMobile && selectedNews && 'w-1/2 opacity-60')}>
                 {listItems.length === 0 ? (
                   <p className="text-center py-12 text-sm text-neutral-400">暂无内容</p>
                 ) : (
@@ -222,16 +295,13 @@ export function StockDetailPanel({
               </div>
 
               {selectedNews && (
-                <div className={cn(
-                  'animate-slide-in overflow-y-auto',
-                  isMobile ? 'mt-3' : 'w-1/2 pl-3',
-                )}>
+                <div className={cn(isMobile ? 'mt-3' : 'w-1/2')}>
                   <div className="bg-neutral-50 rounded-xl p-4 h-full">
                     {selectedNews.sentiment && <SentimentTag sentiment={selectedNews.sentiment} />}
                     <h4 className="text-sm font-semibold text-neutral-900 mt-2 leading-snug">{selectedNews.title}</h4>
                     <p className="text-[11px] text-neutral-400 tabular mt-1">{selectedNews.date}</p>
                     <p className="text-[13px] text-neutral-600 leading-relaxed mt-3">
-                      {getNewsBody(selectedNews, stock)}
+                      {getNewsBody(selectedNews, display)}
                     </p>
                     {selectedNews.url && (
                       <a

@@ -14,10 +14,35 @@ export interface QuoteItem {
   high: number
   low: number
   volume?: number
+  amount?: number
+  turnover?: number
+  pe?: number
+  peTtm?: number
+  pb?: number
+  marketCap?: number
+  circMarketCap?: number
+  amplitude?: number
+  volumeRatio?: number
+  limitUp?: number
+  limitDown?: number
+  industry?: string
   isWatchlisted?: boolean
   prevClose?: number
   updatedAt?: string
   secid?: string
+}
+
+export type ChartPeriod = 'intraday' | '5d' | 'day' | 'week' | 'month'
+
+export interface KlineBar {
+  time: string
+  open: number
+  close: number
+  high: number
+  low: number
+  volume: number
+  amount?: number
+  changePercent?: number
 }
 
 export interface SparklineDataPoint {
