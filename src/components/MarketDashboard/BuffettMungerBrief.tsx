@@ -27,7 +27,7 @@ export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
       <div className="flex items-end justify-between gap-3 mb-2.5">
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-neutral-800">巴菲特 / 芒格 / 段永平</p>
-          <p className="text-[11px] text-neutral-400 mt-0.5">定性判断 + 定量下一步，非原话或持仓建议</p>
+          <p className="text-[11px] text-neutral-400 mt-0.5">框架推演，不是荐股</p>
         </div>
       </div>
       <SegmentedControl
@@ -60,12 +60,13 @@ export function BuffettMungerBrief({ stock }: { stock: QuoteItem }) {
       {(view === 'compare' || view === 'skill') && (
         <VersionBlock
           kicker="框架版"
-          title="AI Berkshire 清单"
+          title="清单推演"
           hint="强制结论 · 三人给不同买价"
         >
           <SkillMemo brief={skill} stock={stock} />
         </VersionBlock>
       )}
+      <ProvenanceNote />
     </section>
   )
 }
@@ -162,6 +163,16 @@ function PlanBlock({ plan, stock }: { plan: SagePlan; stock: QuoteItem }) {
           label={plan.trimAt === null ? '减仓' : '减仓'}
           value={plan.trimAt === null ? '不因上涨卖' : formatPlanPrice(plan.trimAt, stock)}
           hint={formatVsNow(plan.trimAt, plan.nowPrice)}
+        />
+        <PlanCell
+          label="现PE / 目标"
+          value={
+            plan.peNow !== null && plan.peTarget !== null
+              ? `${plan.peNow.toFixed(0)}x → ${plan.peTarget.toFixed(0)}x`
+              : plan.peNow !== null
+                ? `${plan.peNow.toFixed(0)}x`
+                : '无市盈率'
+          }
         />
         <PlanCell
           label="重审"
@@ -285,6 +296,30 @@ function PlanStrip({ plan, stock }: { plan: SagePlan; stock: QuoteItem }) {
       {plan.buyTo !== null ? ` · 等到 ${formatPlanPrice(plan.buyTo, stock)}` : ''}
       {` · 首笔 ${plan.firstLotPct}`}
     </p>
+  )
+}
+
+function ProvenanceNote() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-3 rounded-2xl border border-black/[0.06] bg-white px-4 py-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-2 text-left"
+      >
+        <span className="text-[12px] font-medium text-neutral-700">依据与边界</span>
+        <span className="text-[11px] text-[#007AFF]">{open ? '收起' : '为什么能看'}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2 text-[12px] text-neutral-600 leading-relaxed">
+          <p>行情和市盈率来自上方同一路盘口（东方财富），不是另接一套「大师数据库」。</p>
+          <p>文字是公开投资原则做成的本地规则：护城河、能力圈、对的价格。没有检索股东信，也没有调用在线大模型或 GitHub 上的投资 Skill。</p>
+          <p>买入区算法：有市盈率时，买价 = 现价 ×（目标市盈率 ÷ 当前市盈率）；没有市盈率就用现价回撤带。目标市盈率按行业分档，三人宽严不同。这不是内在价值，也复现不了伯克希尔的决策。</p>
+          <p>所以它能帮你把「好不好」收成可核对的数字，但不能当成巴菲特、芒格、段永平的原话、持仓或投顾意见。收费卖的应是工具和纪律，不是荐股。</p>
+        </div>
+      )}
+    </div>
   )
 }
 

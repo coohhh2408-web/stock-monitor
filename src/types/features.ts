@@ -45,3 +45,11 @@ export const FEATURE_STUBS = {
     status: 'ready',
   },
 } as const satisfies Record<string, FeatureStubMeta>
+
+/** 每个收费功能上线前过这四关：易用、可核对、好看、和雪球/同花顺不一样。 */
+export const PRODUCT_GUARDRAILS = {
+  usability: '三步内能完成，数字一眼能懂，空态也说得清下一步。',
+  credibility: '来源、算法、边界写在界面上。能复核才收费，荐股和冒充大师不收费。',
+  craft: '信息层级清楚，手机底栏不挡字，不靠炫技换信任。',
+  paidDiff: '卖纪律和工具：做T、到价提醒、可复核的框架；不拼资讯量和社区嗓门。',
+} as const
