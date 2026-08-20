@@ -1,12 +1,13 @@
 {
   "name": "stock-monitor",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "build": "tsc -b && vite build && cp dist/index.html dist/404.html",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts",
+    "preview": "vite preview --host --port 4173",
     "ios:add": "mkdir -p ios && tar -xzf node_modules/@capacitor/cli/assets/ios-spm-template.tar.gz -C ios",
     "ios:build": "npm run build && npx cap sync ios",
     "ios:open": "npx cap open ios",

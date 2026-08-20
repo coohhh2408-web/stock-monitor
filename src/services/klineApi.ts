@@ -1,5 +1,5 @@
 import { usesDevProxy } from '@/lib/devProxy'
-import { toEastMoneySecid } from '@/services/symbolMap'
+import { toEastMoneySecid, toTencentSymbol } from '@/services/symbolMap'
 import type { ChartPeriod, KlineBar, QuoteItem } from '@/types/market'
 
 interface EastMoneyKline {
@@ -115,15 +115,64 @@ async function fetchTrends(quote: QuoteItem, ndays: 1 | 5): Promise<{ bars: Klin
 }
 
 async function fetchHistory(quote: QuoteItem, period: 'day' | 'week' | 'month'): Promise<KlineBar[]> {
+  const fromTencent = await fetchTencentHistory(quote, period).catch(() => [])
+  if (fromTencent.length > 0 && !isStale(fromTencent)) return fromTencent
+
   const secid = toEastMoneySecid(quote.code, quote.market, quote.secid)
   const klt = PERIOD_KLT[period]
-  const lmt = period === 'month' ? 60 : 90
+  const lmt = period === 'month' ? 120 : period === 'week' ? 260 : 500
   const path =
     `/api/qt/stock/kline/get?secid=${encodeURIComponent(secid)}` +
     `&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61` +
     `&klt=${klt}&fqt=1&end=20500101&lmt=${lmt}&ut=${UT}`
-  const payload = await getJsonFallback<EastMoneyKline>(hisUrls(path))
-  return (payload.data?.klines ?? []).map((line) => parseKlineLine(line)).filter((b): b is KlineBar => !!b)
+  for (const url of hisUrls(path)) {
+    try {
+      const payload = await getJson<EastMoneyKline>(url)
+      const bars = (payload.data?.klines ?? []).map((line) => parseKlineLine(line)).filter((b): b is KlineBar => !!b)
+      if (bars.length > 0 && !isStale(bars)) return bars
+    } catch {
+      /* try next host */
+    }
+  }
+  return fromTencent
+}
+
+async function fetchTencentHistory(quote: QuoteItem, period: 'day' | 'week' | 'month'): Promise<KlineBar[]> {
+  const symbol = toTencentSymbol(quote.code, quote.market)
+  const span = period === 'month' ? 120 : period === 'week' ? 260 : 500
+  const url =
+    `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${encodeURIComponent(symbol)},${period},,,${span},qfq`
+  const payload = await getJson<TencentKline>(url)
+  const pack = payload.data?.[symbol]
+  if (!pack) return []
+  const rows = [pack[`qfq${period}`], pack[period], pack.qfqday, pack.day].find((item) => Array.isArray(item) && item.length > 0)
+  if (!Array.isArray(rows)) return []
+  return rows.map(parseTencentBar).filter((b): b is KlineBar => !!b)
+}
+
+interface TencentKline {
+  code?: number
+  data?: Record<string, Record<string, unknown>>
+}
+
+function parseTencentBar(row: unknown): KlineBar | null {
+  if (!Array.isArray(row) || row.length < 5) return null
+  const time = String(row[0] ?? '')
+  const open = num(row[1])
+  const close = num(row[2])
+  const high = num(row[3])
+  const low = num(row[4])
+  const volume = num(row[5])
+  if (!time || open === null || close === null || high === null || low === null) return null
+  return { time, open, close, high, low, volume: volume ?? 0 }
+}
+
+function isStale(bars: KlineBar[]): boolean {
+  const last = bars[bars.length - 1]?.time
+  if (!last) return true
+  const t = Date.parse(last.slice(0, 10))
+  if (!Number.isFinite(t)) return true
+  return Date.now() - t > 40 * 24 * 60 * 60 * 1000
 }
 
 export async function fetchChartSeries(

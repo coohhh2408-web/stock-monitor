@@ -4,12 +4,14 @@ import { KlineChart } from '@/components/ui/KlineChart'
 import { QuoteStatsGrid } from './QuoteStatsGrid'
 import { BuffettMungerBrief } from './BuffettMungerBrief'
 import { Shelf } from '@/components/ui/Shelf'
+import { PricePlanStrip } from './PricePlanStrip'
 import { cn, formatPrice, getChangeColor } from '@/lib/utils'
 import { lightTap } from '@/lib/nativeInit'
 import { fetchFlashNews, fetchStockNews } from '@/services/newsApi'
 import { fetchChartSeries, fetchQuoteSnapshot } from '@/services/klineApi'
 import { fetchFinancials } from '@/services/financialsApi'
 import type { QuoteItem, AnnouncementItem, ChartPeriod, FinancialsPack, KlineBar } from '@/types/market'
+import type { ScreenerPick } from '@/services/stockScreener'
 
 const PERIODS: { value: ChartPeriod; label: string }[] = [
   { value: 'intraday', label: '分时' },
@@ -24,6 +26,7 @@ interface StockDetailPanelProps {
   stock: QuoteItem | null
   onClose: () => void
   isMobile?: boolean
+  pick?: ScreenerPick | null
 }
 
 export function StockDetailPanel({
@@ -31,6 +34,7 @@ export function StockDetailPanel({
   stock,
   onClose,
   isMobile = false,
+  pick = null,
 }: StockDetailPanelProps) {
   const [selectedNews, setSelectedNews] = useState<AnnouncementItem | null>(null)
   const [visible, setVisible] = useState(false)
@@ -233,8 +237,12 @@ export function StockDetailPanel({
           <QuoteStatsGrid stock={display} financials={financials} />
         </div>
 
+        <div className="mb-4">
+          <PricePlanStrip quote={display} variant="panel" />
+        </div>
+
         <h2 className="text-[22px] font-bold tracking-tight text-neutral-900 mb-3 px-0.5">价值清单</h2>
-        <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} />
+        <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} pick={pick} />
 
         {newsItems.length > 0 && (
           <Shelf title="快讯" className="mt-5">

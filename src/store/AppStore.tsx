@@ -15,7 +15,7 @@ import {
   MOCK_T_TRADES,
   MOCK_ALERTS,
 } from '@/data/mockData'
-import { loadFromStorage, saveToStorage, removeFromStorage, STORAGE_KEYS } from '@/lib/storage'
+import { loadFromStorage, loadOptionalFromStorage, saveToStorage, removeFromStorage, STORAGE_KEYS } from '@/lib/storage'
 import { APP_RESUME_EVENT } from '@/lib/nativeInit'
 import { tickQuote, syncPositionPrice, computePortfolioSummary, generateAIDiagnosis, generateSparkline, buildPosition } from '@/services/marketService'
 import { fetchLiveQuote, fetchLiveQuotes } from '@/services/quoteApi'
@@ -37,7 +37,19 @@ import {
 } from '@/services/notificationService'
 import { catalogEntryToQuote } from '@/data/stockCatalog'
 import { alertTriggerMessage, isAlertTriggered, normalizeAlertRule } from '@/lib/alertUtils'
+import { reconcileAlertNotifications, sameAlertIdSet } from '@/lib/alertNotify'
+import { coverIdentity } from '@/lib/stealthCover'
+import {
+  collectPlanTriggers,
+  loadNormalizedPlans,
+  normalizePricePlan,
+  planArmIds,
+  planTriggerMessage,
+  planTriggerTitle,
+  tickPlanPeaks,
+} from '@/lib/pricePlan'
 import type { QuoteItem, AIDiagnosisStub, SparklineDataPoint, StockCatalogEntry } from '@/types/market'
+import type { PricePlan, PricePlanDraft } from '@/types/pricePlan'
 import type {
   PositionItem,
   TTradeRecord,
@@ -45,7 +57,7 @@ import type {
   TTradeCalculationResult,
   PortfolioSummary,
 } from '@/types/position'
-import type { AlertRule, BarkSettings, DesktopAlertSettings, ShareViewStub } from '@/types/alert'
+import type { AlertRule, BarkSettings, DesktopAlertSettings, IncomingCallPayload, ShareViewStub } from '@/types/alert'
 import { DEFAULT_APP_SETTINGS, type AppSettings } from '@/types/settings'
 import type { CloudSyncState, SyncPayload } from '@/types/cloudSync'
 
@@ -69,6 +81,7 @@ interface AppState {
   sparklineCache: Record<string, SparklineDataPoint[]>
   lastRefreshedAt: string | null
   quoteFeed: QuoteFeed
+  pricePlans: Record<string, PricePlan>
 }
 
 type Action =
@@ -94,6 +107,7 @@ type Action =
   | { type: 'SET_SETTINGS'; settings: Partial<AppSettings> }
   | { type: 'SET_AI_DIAGNOSIS'; code: string; diagnosis: AIDiagnosisStub }
   | { type: 'HYDRATE_SYNC'; payload: SyncPayload }
+  | { type: 'UPSERT_PRICE_PLAN'; code: string; plan: PricePlan | null }
   | { type: 'RESET_ALL' }
 
 function normalizeAlerts(alerts: AlertRule[]): AlertRule[] {
@@ -130,6 +144,7 @@ function loadInitialState(): AppState {
     sparklineCache: {},
     lastRefreshedAt: null,
     quoteFeed: { status: 'idle', source: 'eastmoney' },
+    pricePlans: loadNormalizedPlans(loadFromStorage(STORAGE_KEYS.pricePlans, {})),
   }
 }
 
@@ -141,7 +156,13 @@ function reducer(state: AppState, action: Action): AppState {
     case 'TICK_PRICES': {
       const quotes = state.quotes.map(tickQuote)
       const positions = syncPositionPrice(state.positions, quotes)
-      return { ...state, quotes, positions, lastRefreshedAt: new Date().toISOString() }
+      return {
+        ...state,
+        quotes,
+        positions,
+        pricePlans: tickPlanPeaks(state.pricePlans, quotes),
+        lastRefreshedAt: new Date().toISOString(),
+      }
     }
 
     case 'MERGE_LIVE_QUOTES': {
@@ -151,6 +172,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         quotes,
         positions,
+        pricePlans: tickPlanPeaks(state.pricePlans, quotes),
         lastRefreshedAt: new Date().toISOString(),
       }
     }
@@ -184,12 +206,15 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'REMOVE_QUOTE': {
       const removed = state.quotes.find((q) => q.id === action.quoteId)
+      const pricePlans = { ...state.pricePlans }
+      if (removed) delete pricePlans[removed.code]
       return {
         ...state,
         quotes: state.quotes.filter((q) => q.id !== action.quoteId),
         alerts: removed
           ? state.alerts.filter((a) => a.stockCode !== removed.code)
           : state.alerts,
+        pricePlans,
       }
     }
 
@@ -282,7 +307,17 @@ function reducer(state: AppState, action: Action): AppState {
         bark: payload.bark,
         desktop: payload.desktop,
         settings: { ...DEFAULT_APP_SETTINGS, ...payload.settings },
+        pricePlans: payload.pricePlans
+          ? loadNormalizedPlans(payload.pricePlans)
+          : state.pricePlans,
       }
+    }
+
+    case 'UPSERT_PRICE_PLAN': {
+      const pricePlans = { ...state.pricePlans }
+      if (action.plan) pricePlans[action.code] = action.plan
+      else delete pricePlans[action.code]
+      return { ...state, pricePlans }
     }
 
     case 'RESET_ALL':
@@ -298,6 +333,7 @@ function reducer(state: AppState, action: Action): AppState {
         sparklineCache: {},
         lastRefreshedAt: null,
         quoteFeed: { status: 'idle', source: 'eastmoney' },
+        pricePlans: {},
       }
 
     default:
@@ -316,6 +352,7 @@ interface AppContextValue {
   summary: PortfolioSummary
   lastRefreshedAt: string | null
   quoteFeed: QuoteFeed
+  pricePlans: Record<string, PricePlan>
   toggleWatchlist: (quoteId: string) => void
   addStock: (entry: StockCatalogEntry) => Promise<boolean>
   removeStock: (quoteId: string) => void
@@ -339,6 +376,8 @@ interface AppContextValue {
   updateAlert: (alert: AlertRule) => void
   deleteAlert: (id: string) => void
   toggleAlert: (id: string) => void
+  setPricePlan: (code: string, draft: PricePlanDraft) => Promise<void>
+  clearPricePlan: (code: string) => void
   setBark: (partial: Partial<BarkSettings>) => void
   setDesktop: (partial: Partial<DesktopAlertSettings>) => void
   setSettings: (partial: Partial<AppSettings>) => void
@@ -365,7 +404,12 @@ export function AppProvider({
 }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadInitialState)
   const [cloudSync, setCloudSyncState] = useState<CloudSyncState>(loadCloudSyncConfig)
-  const notifiedAlerts = useRef<Set<string>>(new Set())
+  const notifiedAlerts = useRef<Set<string>>(
+    new Set(loadOptionalFromStorage<string[]>(STORAGE_KEYS.notifiedAlerts) ?? []),
+  )
+  const notifyNeedsBootstrap = useRef(
+    loadOptionalFromStorage<string[]>(STORAGE_KEYS.notifiedAlerts) === undefined,
+  )
   const toast = showToast ?? (() => {})
   const quotesRef = useRef(state.quotes)
   quotesRef.current = state.quotes
@@ -388,6 +432,7 @@ export function AppProvider({
       lastSavedAt: new Date().toISOString(),
     })
     saveToStorage(STORAGE_KEYS.aiCache, state.aiCache)
+    saveToStorage(STORAGE_KEYS.pricePlans, state.pricePlans)
   }, [state])
 
   const pullLiveQuotes = useCallback(async (silent = true) => {
@@ -442,31 +487,72 @@ export function AppProvider({
   }, [state.settings.liveQuotesEnabled, pullLiveQuotes])
 
   useEffect(() => {
-    const activeAlerts = state.alerts.filter((a) => a.isActive)
-    if (activeAlerts.length === 0) return
+    const triggeredIds: string[] = []
+    const triggeredById = new Map<string, AlertRule>()
 
-    for (const alert of activeAlerts) {
+    for (const alert of state.alerts) {
+      if (!alert.isActive) continue
       const quote = state.quotes.find((q) => q.code === alert.stockCode)
-      if (!quote) continue
+      if (!quote || !isAlertTriggered(alert, quote)) continue
+      triggeredIds.push(alert.id)
+      triggeredById.set(alert.id, alert)
+    }
 
-      if (!isAlertTriggered(alert, quote)) {
-        notifiedAlerts.current.delete(alert.id)
+    const planHits = collectPlanTriggers(state.pricePlans, state.quotes)
+    for (const hit of planHits) triggeredIds.push(hit.id)
+
+    if (notifyNeedsBootstrap.current) {
+      notifyNeedsBootstrap.current = false
+      notifiedAlerts.current = new Set(triggeredIds)
+      saveToStorage(STORAGE_KEYS.notifiedAlerts, triggeredIds)
+      return
+    }
+
+    const { notified, fireIds } = reconcileAlertNotifications(notifiedAlerts.current, triggeredIds)
+    if (!sameAlertIdSet(notifiedAlerts.current, notified)) {
+      notifiedAlerts.current = notified
+      saveToStorage(STORAGE_KEYS.notifiedAlerts, [...notified])
+    }
+
+    for (const id of fireIds) {
+      const alert = triggeredById.get(id)
+      const quote = alert ? state.quotes.find((q) => q.code === alert.stockCode) : undefined
+      if (alert && quote) {
+        const title = `${alert.stockName} 提醒触发`
+        const body = alertTriggerMessage(alert, quote)
+        const cover = coverIdentity(alert.stockCode)
+        const incoming: IncomingCallPayload = {
+          id: alert.id,
+          coverName: cover.name,
+          coverLine: cover.line,
+          title,
+          body,
+        }
+        deliverDesktopAlert(state.desktop, title, body, incoming)
+        if (state.bark.enabled && state.bark.key.trim()) {
+          void sendBarkPush(state.bark, title, body)
+        }
         continue
       }
 
-      if (notifiedAlerts.current.has(alert.id)) continue
-      notifiedAlerts.current.add(alert.id)
-
-      const title = `${alert.stockName} 提醒触发`
-      const body = alertTriggerMessage(alert, quote)
-
-      deliverDesktopAlert(state.desktop, title, body)
-
+      const planHit = planHits.find((hit) => hit.id === id)
+      if (!planHit) continue
+      const title = planTriggerTitle(planHit.kind, planHit.quote.name)
+      const body = planTriggerMessage(planHit.kind, planHit.quote, planHit.plan)
+      const cover = coverIdentity(planHit.quote.code)
+      const incoming: IncomingCallPayload = {
+        id: planHit.id,
+        coverName: cover.name,
+        coverLine: cover.line,
+        title,
+        body,
+      }
+      deliverDesktopAlert(state.desktop, title, body, incoming)
       if (state.bark.enabled && state.bark.key.trim()) {
         void sendBarkPush(state.bark, title, body)
       }
     }
-  }, [state.quotes, state.alerts, state.desktop, state.bark])
+  }, [state.quotes, state.alerts, state.desktop, state.bark, state.pricePlans])
 
   const summary = useMemo(() => computePortfolioSummary(state.positions), [state.positions])
 
@@ -652,6 +738,56 @@ export function AppProvider({
     [state.alerts, toast],
   )
 
+  const disarmPlanAlerts = useCallback((ids: string[]) => {
+    if (ids.length === 0) return
+    let changed = false
+    for (const id of ids) {
+      if (notifiedAlerts.current.has(id)) {
+        notifiedAlerts.current.delete(id)
+        changed = true
+      }
+    }
+    if (changed) saveToStorage(STORAGE_KEYS.notifiedAlerts, [...notifiedAlerts.current])
+  }, [])
+
+  const setPricePlan = useCallback(
+    async (code: string, draft: PricePlanDraft) => {
+      const quote = state.quotes.find((q) => q.code === code)
+      const previous = state.pricePlans[code]
+      const plan = normalizePricePlan(
+        {
+          code,
+          takeProfit: draft.takeProfit,
+          stopLoss: draft.stopLoss,
+          trailPercent: draft.trailPercent,
+          peakPrice: previous?.peakPrice,
+          updatedAt: new Date().toISOString(),
+        },
+        quote?.price,
+      )
+      disarmPlanAlerts(planArmIds(previous, plan))
+      if (plan) {
+        const perm = await requestNotificationPermission()
+        if (perm === 'denied') {
+          toast('通知权限被拒绝，到价提醒可能无法显示', 'error')
+        }
+      }
+      dispatch({ type: 'UPSERT_PRICE_PLAN', code, plan })
+      toast(plan ? '止盈止损已写入看板' : '已清除该标的的止盈止损', plan ? 'success' : 'info')
+    },
+    [disarmPlanAlerts, state.pricePlans, state.quotes, toast],
+  )
+
+  const clearPricePlan = useCallback(
+    (code: string) => {
+      const previous = state.pricePlans[code]
+      disarmPlanAlerts(planArmIds(previous, null))
+      dispatch({ type: 'UPSERT_PRICE_PLAN', code, plan: null })
+      toast('已清除该标的的止盈止损', 'info')
+    },
+    [disarmPlanAlerts, state.pricePlans, toast],
+  )
+
   const getSparkline = useCallback(
     (code: string, basePrice: number) => {
       if (state.sparklineCache[code]) return state.sparklineCache[code]
@@ -713,8 +849,9 @@ export function AppProvider({
       bark: state.bark,
       desktop: state.desktop,
       settings: state.settings,
+      pricePlans: state.pricePlans,
     })
-  }, [state.quotes, state.positions, state.tTrades, state.alerts, state.bark, state.desktop, state.settings])
+  }, [state.quotes, state.positions, state.tTrades, state.alerts, state.bark, state.desktop, state.settings, state.pricePlans])
 
   const pushCloudSync = useCallback(async () => {
     const cfg = cloudSyncRef.current
@@ -807,6 +944,7 @@ export function AppProvider({
     state.bark,
     state.desktop,
     state.settings,
+    state.pricePlans,
     pushCloudSync,
   ])
 
@@ -831,6 +969,7 @@ export function AppProvider({
     summary,
     lastRefreshedAt: state.lastRefreshedAt,
     quoteFeed: state.quoteFeed,
+    pricePlans: state.pricePlans,
     toggleWatchlist,
     addStock,
     removeStock,
@@ -844,6 +983,8 @@ export function AppProvider({
     updateAlert,
     deleteAlert,
     toggleAlert,
+    setPricePlan,
+    clearPricePlan,
     setBark: (partial) => dispatch({ type: 'SET_BARK', bark: partial }),
     setDesktop: (partial) => dispatch({ type: 'SET_DESKTOP', desktop: partial }),
     setSettings: (partial) => dispatch({ type: 'SET_SETTINGS', settings: partial }),
@@ -853,6 +994,8 @@ export function AppProvider({
     createShareLink,
     resetAllData: () => {
       Object.values(STORAGE_KEYS).forEach((key) => removeFromStorage(key))
+      notifiedAlerts.current = new Set()
+      notifyNeedsBootstrap.current = true
       dispatch({ type: 'RESET_ALL' })
       toast('已重置全部数据', 'info')
     },

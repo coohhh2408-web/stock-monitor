@@ -1,4 +1,5 @@
 import { formatQuotePrice } from '@/lib/utils'
+import { priceSeat } from '@/lib/sageBand'
 import type { BusinessKind, ValueStance } from '@/services/buffettMunger'
 import type { QuoteItem } from '@/types/market'
 
@@ -143,15 +144,23 @@ export function buildSagePlan(
     buyTo = swap
   }
 
-  const canBuyNow = buyTo >= now * 0.98 && stance === 'constructive'
+  const canBuyNow = stance === 'constructive' && priceSeat(now, buyFrom, buyTo) !== 'rich'
   const action: SageAction = canBuyNow ? 'buy' : 'wait'
   const addAt = roundMoney(buyFrom * (1 - 0.04), now)
   const trimAt = style.trim === null ? null : roundMoney(now * (1 + style.trim), now)
   const reviewAt = roundMoney(Math.min(buyFrom, now) * (1 - style.review), now)
+  const seat = priceSeat(now, buyFrom, buyTo)
 
   const firstLotPct = action === 'buy' ? style.firstBuy : stance === 'cautious' ? style.firstCautious : style.firstWait
   const maxLotPct = action === 'buy' ? style.maxBuy : stance === 'cautious' ? style.maxCautious : style.maxWait
-  const actionLabel = action === 'buy' ? '可小建仓' : stance === 'cautious' ? '等待对的价格' : '等回调'
+  const actionLabel =
+    action === 'buy'
+      ? '可小建仓'
+      : seat === 'rich'
+        ? stance === 'cautious'
+          ? '等待对的价格'
+          : '等回调'
+        : '价格已到，先核质量'
 
   const trimText =
     trimAt === null
@@ -160,8 +169,10 @@ export function buildSagePlan(
 
   const whenBuy =
     action === 'buy'
-      ? `当前 ${money(now)} 已进入可买上沿，第一笔 ${firstLotPct}，总上限 ${maxLotPct}。`
-      : `当前 ${money(now)} 先不买。等到 ${money(buyFrom)}–${money(buyTo)}（${vsNow(buyTo, now)} 到 ${vsNow(buyFrom, now)}）再下第一笔 ${firstLotPct}，上限 ${maxLotPct}。`
+      ? `当前 ${money(now)} 已不高于习惯买点 ${money(buyTo)}，第一笔 ${firstLotPct}，总上限 ${maxLotPct}。`
+      : seat === 'rich'
+        ? `当前 ${money(now)} 先不买。等到跌回 ${money(buyFrom)}–${money(buyTo)} 再下第一笔 ${firstLotPct}，上限 ${maxLotPct}。`
+        : `当前 ${money(now)} 已经在习惯带内或更便宜（${money(buyFrom)}–${money(buyTo)}）。先不买是质量或能力圈还没过关，不是等它涨到 ${money(buyTo)}。若质量关过了，第一笔对照 ${firstLotPct}，上限 ${maxLotPct}。`
 
   const nextStep = `${authorLead(author)}${whenBuy}跌到 ${money(addAt)}（${vsNow(addAt, now)}）再加一笔；${trimText}。跌破 ${money(reviewAt)} 先停手重审，不补仓证明自己是对的。`
 

@@ -30,6 +30,15 @@ export interface DesktopAlertSettings {
   popupAlert: boolean
 }
 
+/** 办公掩护：看起来像系统来电，接听后才看到股价正文。 */
+export interface IncomingCallPayload {
+  id: string
+  coverName: string
+  coverLine: string
+  title: string
+  body: string
+}
+
 export type ShareViewStatus = 'idle' | 'generating' | 'ready' | 'copied' | 'error'
 
 export interface ShareViewStub {

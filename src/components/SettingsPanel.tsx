@@ -1,6 +1,7 @@
 import { Modal, Button } from '@/components/ui/Modal'
 import { Toggle } from '@/components/ui/Toggle'
 import { CloudSyncPanel } from '@/components/CloudSyncPanel'
+import { WEB_RELEASE_LABEL } from '@/lib/release'
 import type { AppSettings } from '@/types/settings'
 import type { CloudSyncState } from '@/types/cloudSync'
 
@@ -100,6 +101,9 @@ export function SettingsPanel({
           <Button variant="danger" size="sm" onClick={handleReset}>
             重置全部数据
           </Button>
+          <p className="text-[11px] text-neutral-400 mt-4 leading-relaxed">
+            {WEB_RELEASE_LABEL}。行情可能延迟，仅供参考，不构成投资建议。
+          </p>
         </section>
       </div>
     </Modal>

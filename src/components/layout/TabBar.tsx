@@ -19,6 +19,17 @@ const TABS: { value: AppTab; label: string; icon: (active: boolean) => ReactNode
     ),
   },
   {
+    value: 'screener',
+    label: '选股',
+    icon: (active) => (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <circle cx="11" cy="11" r="6" stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" />
+        <path d="M15.5 15.5L20 20" stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M8 11h6M11 8v6" stroke={active ? '#007AFF' : '#8E8E93'} strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     value: 'position',
     label: '持仓',
     icon: (active) => (

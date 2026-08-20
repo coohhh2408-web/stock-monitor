@@ -1,5 +1,6 @@
 import { MiniSparkline } from '@/components/ui/MiniSparkline'
 import { ChangeCapsule, MarketTag } from '@/components/ui/StocksPrimitives'
+import { PricePlanStrip } from './PricePlanStrip'
 import { cn, formatListedCode, formatPrice, formatQuotePrice } from '@/lib/utils'
 import { lightTap } from '@/lib/nativeInit'
 import type { QuoteItem, SparklineDataPoint } from '@/types/market'
@@ -66,6 +67,7 @@ export function QuoteCard({
         <p className="text-[32px] font-semibold tracking-tight font-mono tabular text-neutral-900 leading-none">
           {formatQuotePrice(quote.price, quote.market)}
         </p>
+        <PricePlanStrip quote={quote} variant="card" />
       </article>
     )
   }
@@ -79,6 +81,10 @@ export function QuoteCard({
         }}
         draggable={Boolean(onReorder)}
         onDragStart={(e) => {
+          if ((e.target as HTMLElement).closest('[data-no-drag]')) {
+            e.preventDefault()
+            return
+          }
           e.dataTransfer.setData('text/quote-id', quote.id)
           e.dataTransfer.effectAllowed = 'move'
         }}
@@ -93,7 +99,7 @@ export function QuoteCard({
           const fromId = e.dataTransfer.getData('text/quote-id')
           if (fromId && fromId !== quote.id) onReorder(fromId, quote.id)
         }}
-        className="quote-card relative group min-h-[176px] overflow-hidden"
+        className="quote-card relative group min-h-[176px]"
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-1.5 min-w-0">
@@ -161,6 +167,7 @@ export function QuoteCard({
             </button>
           </div>
         </div>
+        <PricePlanStrip quote={quote} variant="card" />
       </article>
     )
   }
@@ -171,21 +178,24 @@ export function QuoteCard({
         void lightTap()
         onOpen()
       }}
-      className="relative flex items-center gap-3 px-4 py-3 bg-white border-b border-black/[0.06] last:border-0 active:bg-neutral-50"
+      className="relative flex flex-col gap-1 px-4 py-3 bg-white border-b border-black/[0.06] last:border-0 active:bg-neutral-50"
     >
-      <div className="min-w-0 flex-1">
-        <h3 className="text-[17px] font-semibold text-neutral-900 truncate leading-tight">{quote.name}</h3>
-        <p className="text-[13px] text-neutral-400 font-mono tabular mt-0.5">{listed}</p>
-      </div>
-      <MiniSparkline data={sparkline} change={quote.change} width={64} height={28} gradientId={quote.id} />
-      <div className="shrink-0 text-right">
-        <p className="text-[17px] font-semibold font-mono tabular text-neutral-900 leading-none">
-          {formatQuotePrice(quote.price, quote.market)}
-        </p>
-        <div className="mt-1.5 flex justify-end">
-          <ChangeCapsule change={quote.change} changePercent={quote.changePercent} compact />
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[17px] font-semibold text-neutral-900 truncate leading-tight">{quote.name}</h3>
+          <p className="text-[13px] text-neutral-400 font-mono tabular mt-0.5">{listed}</p>
+        </div>
+        <MiniSparkline data={sparkline} change={quote.change} width={64} height={28} gradientId={quote.id} />
+        <div className="shrink-0 text-right">
+          <p className="text-[17px] font-semibold font-mono tabular text-neutral-900 leading-none">
+            {formatQuotePrice(quote.price, quote.market)}
+          </p>
+          <div className="mt-1.5 flex justify-end">
+            <ChangeCapsule change={quote.change} changePercent={quote.changePercent} compact />
+          </div>
         </div>
       </div>
+      <PricePlanStrip quote={quote} variant="list" />
     </article>
   )
 }

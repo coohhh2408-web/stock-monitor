@@ -466,25 +466,55 @@ function take(
   return { author, lens, stance, summary, plan: buildSagePlan(stock, kind, stance, id) }
 }
 
+export const BUSINESS_KIND_LABEL: Record<BusinessKind, string> = {
+  'consumer-franchise': '消费特许经营权',
+  bank: '银行',
+  insurance: '保险',
+  platform: '平台',
+  semiconductor: '半导体',
+  'ev-battery': '电池制造',
+  commodity: '商品周期',
+  auto: '整车',
+  solar: '光伏制造',
+  pharma: '医药',
+  telecom: '电信',
+  utility: '公用事业',
+  realty: '房地产',
+  manufacturing: '制造',
+  futures: '期货合约',
+  unknown: '未归类',
+}
+
 export function inferBusinessKind(stock: QuoteItem): BusinessKind {
   if (stock.market === 'futures') return 'futures'
+  const known = KNOWN.find((item) => {
+    const code = normalizeCode(stock.code)
+    const name = stock.name.trim().toLowerCase()
+    return (
+      item.codes.some((c) => normalizeCode(c) === code) ||
+      item.names.some((n) => name.includes(n.toLowerCase()) || n.toLowerCase().includes(name))
+    )
+  })
+  if (known) return known.kind
+
   const text = `${stock.name} ${stock.industry ?? ''}`.toLowerCase()
   const hit = (keywords: string[]) => keywords.some((k) => text.includes(k.toLowerCase()))
 
-  if (hit(['白酒', '啤酒', '饮料', '食品', '乳', '调味', '消费', '服饰', '化妆品', '中药'])) return 'consumer-franchise'
-  if (hit(['银行', '农商', '股份'])) return 'bank'
+  // 不用「消费」「股份」：东财行业「消费品」和名称里的「股份」会把整板块误判。
+  if (hit(['白酒', '啤酒', '饮料', '食品', '乳', '调味', '服饰', '化妆品', '中药', '乳品'])) return 'consumer-franchise'
+  if (hit(['银行', '农商'])) return 'bank'
   if (hit(['保险', '人寿', '财险'])) return 'insurance'
   if (hit(['半导体', '芯片', '集成电路', 'gpu', '光模块', '先进封装', '寒武纪', '中际旭创'])) return 'semiconductor'
   if (hit(['电池', '锂电', '储能'])) return 'ev-battery'
   if (hit(['光伏', '太阳能', '硅料', '风电'])) return 'solar'
   if (hit(['汽车', '整车', '新能源车'])) return 'auto'
-  if (hit(['铜', '铝', '锌', '镍', '钼', '锂', '稀土', '煤炭', '石油', '钢铁', '有色'])) return 'commodity'
+  if (hit(['铜', '铝', '锌', '镍', '钼', '锂', '稀土', '煤炭', '石油', '钢铁', '有色', '炼化'])) return 'commodity'
   if (hit(['地产', '房地产', '物业'])) return 'realty'
   if (hit(['医药', '生物', '疫苗', 'CXO', '医疗'])) return 'pharma'
-  if (hit(['运营商', '电信', '移动', '联通', '通信'])) return 'telecom'
+  if (hit(['运营商', '电信', '移动', '联通', '通信', '通讯服务'])) return 'telecom'
   if (hit(['电力', '水电', '核电', '燃气', '水务', '公用'])) return 'utility'
-  if (hit(['互联网', '电商', '游戏', '社交', '软件', '云', '平台', '广告'])) return 'platform'
-  if (hit(['制造', '电子', '器件', '设备', '机械', '军工', '航空'])) return 'manufacturing'
+  if (hit(['互联网', '电商', '游戏', '社交', '软件', '云', '平台', '广告', '专业零售'])) return 'platform'
+  if (hit(['制造', '电子', '器件', '设备', '机械', '军工', '航空', '家电', '工业工程'])) return 'manufacturing'
   return 'unknown'
 }
 

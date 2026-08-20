@@ -22,6 +22,10 @@ export function AlertManager({ isMobile = false }: { isMobile?: boolean }) {
         </header>
       )}
 
+      <p className="text-[12px] text-neutral-400 mb-4 leading-relaxed">
+        止盈 / 止损写在行情看板卡片上，到价走同一套来电提醒。这里仍是涨破、跌破、涨跌幅规则。
+      </p>
+
       <div className={isMobile ? 'space-y-5' : 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start'}>
         <AlertRules
           quotes={quotes}

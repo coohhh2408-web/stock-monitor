@@ -12,6 +12,7 @@ import {
   type SkillBrief,
 } from '@/services/buffettMungerSkill'
 import { formatPlanPrice, formatVsNow, type SagePlan } from '@/services/sagePlan'
+import { bandHint, priceSeat } from '@/lib/sageBand'
 import {
   buildValueChecklist,
   type ChecklistVerdict,
@@ -22,6 +23,7 @@ import { classifyStrike } from '@/services/strikeZone'
 import { answerLabel, type GateAnswer, type InfoRichness } from '@/services/valueSkill'
 import { buildEarningsBrief, type EarningsBrief } from '@/services/earningsBrief'
 import type { FinancialsPack, QuoteItem } from '@/types/market'
+import type { ScreenerPick } from '@/services/stockScreener'
 
 type SageView = 'list' | 'earnings' | 'research'
 type SageTone = 'buffett' | 'munger' | 'duan'
@@ -32,21 +34,25 @@ export function BuffettMungerBrief({
   stock,
   financials = null,
   financialsStatus = 'empty',
+  pick = null,
 }: {
   stock: QuoteItem
   financials?: FinancialsPack | null
   financialsStatus?: FinStatus
+  pick?: ScreenerPick | null
 }) {
-  const [view, setView] = useState<SageView>('list')
+  const [view, setView] = useState<SageView>(pick ? 'research' : 'list')
   const [research, setResearch] = useState<ResearchView>('prose')
   const checklist = buildValueChecklist(stock, financials?.latest)
-  const prose = view === 'research' ? buildBuffettMungerBrief(stock) : null
+  const prose = view === 'research' || pick ? buildBuffettMungerBrief(stock) : null
   const skill = view === 'research' ? buildSkillBrief(stock) : null
   const earnings =
     view === 'earnings' && financials ? buildEarningsBrief(stock.name, inferBusinessKind(stock), financials) : null
 
   return (
     <section className="mb-4">
+      {pick && <PickReasonCard pick={pick} stock={stock} />}
+
       <SegmentedControl
         options={[
           { value: 'list' as const, label: '清单' },
@@ -94,6 +100,21 @@ export function BuffettMungerBrief({
       )}
       <ProvenanceNote />
     </section>
+  )
+}
+
+function PickReasonCard({ pick, stock }: { pick: ScreenerPick; stock: QuoteItem }) {
+  return (
+    <article className="mb-3 rounded-2xl border border-black/[0.06] bg-neutral-50 px-4 py-3.5">
+      <p className="text-[10px] text-neutral-400 mb-1">为什么入选</p>
+      <p className="text-[15px] font-semibold text-neutral-900 leading-snug">
+        {pick.presetLabel} · {pick.kindLabel} · {pick.statusLabel}
+      </p>
+      <p className="text-[12px] text-neutral-600 leading-relaxed mt-1.5">{pick.logic}</p>
+      <p className="text-[12px] text-neutral-500 tabular mt-1.5">
+        当前 {pick.peNow.toFixed(0)}x · 习惯 {pick.peHabit.toFixed(0)}x · 观察价 {formatQuotePrice(pick.habitPrice, stock.market)}
+      </p>
+    </article>
   )
 }
 
@@ -354,7 +375,10 @@ function PlanBlock({ plan, stock }: { plan: SagePlan; stock: QuoteItem }) {
     plan.buyFrom !== null && plan.buyTo !== null
       ? `${formatPlanPrice(plan.buyFrom, stock)}–${formatPlanPrice(plan.buyTo, stock)}`
       : '—'
-  const buyVs = plan.buyTo !== null ? formatVsNow(plan.buyTo, plan.nowPrice) : ''
+  const buyVs =
+    plan.buyFrom !== null && plan.buyTo !== null
+      ? bandHint(priceSeat(plan.nowPrice, plan.buyFrom, plan.buyTo))
+      : ''
   return (
     <div className="mt-3 pt-3 border-t border-black/[0.05]">
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-2">

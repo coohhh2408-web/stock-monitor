@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { cn, formatPrice } from '@/lib/utils'
+import { defaultView, panView, zoomView, type ChartView } from '@/lib/chartViewport'
 import type { ChartPeriod, KlineBar } from '@/types/market'
 import { isCandlePeriod } from '@/services/klineApi'
 
@@ -39,8 +40,13 @@ function formatTipTime(time: string, period: ChartPeriod): string {
 
 export function KlineChart({ bars, period, prevClose, loading, className }: KlineChartProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
   const [width, setWidth] = useState(320)
   const [hover, setHover] = useState<number | null>(null)
+  const [view, setView] = useState<ChartView>(() => defaultView(period, bars.length))
+  const dragRef = useRef<{ x: number; view: ChartView; panning: boolean } | null>(null)
+  const pinchRef = useRef<{ dist: number; view: ChartView } | null>(null)
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>())
   const gid = useId().replace(/:/g, '')
 
   useEffect(() => {
@@ -54,6 +60,7 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
 
   useEffect(() => {
     setHover(null)
+    setView(defaultView(period, bars.length))
   }, [period, bars.length])
 
   const candle = isCandlePeriod(period)
@@ -63,34 +70,41 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
   const chartH = height - volH - pad.top - pad.bottom - 6
   const innerW = Math.max(1, width - pad.left - pad.right)
 
-  const ma5 = useMemo(() => (candle ? movingAverage(bars, 5) : []), [bars, candle])
-  const ma10 = useMemo(() => (candle ? movingAverage(bars, 10) : []), [bars, candle])
-  const ma20 = useMemo(() => (candle ? movingAverage(bars, 20) : []), [bars, candle])
+  const start = Math.max(0, view.end - view.size)
+  const visible = bars.slice(start, view.end)
+  const count = visible.length
+
+  const ma5Full = useMemo(() => (candle ? movingAverage(bars, 5) : []), [bars, candle])
+  const ma10Full = useMemo(() => (candle ? movingAverage(bars, 10) : []), [bars, candle])
+  const ma20Full = useMemo(() => (candle ? movingAverage(bars, 20) : []), [bars, candle])
+  const ma5 = ma5Full.slice(start, view.end)
+  const ma10 = ma10Full.slice(start, view.end)
+  const ma20 = ma20Full.slice(start, view.end)
 
   const stats = useMemo(() => {
-    if (bars.length === 0) return null
-    const highs = bars.map((b) => b.high)
-    const lows = bars.map((b) => b.low)
+    if (visible.length === 0) return null
+    const highs = visible.map((b) => b.high)
+    const lows = visible.map((b) => b.low)
     let min = Math.min(...lows)
     let max = Math.max(...highs)
-    if (prevClose && Number.isFinite(prevClose)) {
+    if (!candle && prevClose && Number.isFinite(prevClose)) {
       min = Math.min(min, prevClose)
       max = Math.max(max, prevClose)
     }
     const range = max - min || max * 0.01 || 1
     min -= range * 0.04
     max += range * 0.04
-    const maxVol = Math.max(...bars.map((b) => b.volume), 1)
+    const maxVol = Math.max(...visible.map((b) => b.volume), 1)
     return { min, max, range: max - min, maxVol }
-  }, [bars, prevClose])
+  }, [visible, prevClose, candle])
 
-  const slot = bars.length > 0 ? innerW / bars.length : innerW
-  const bodyW = Math.max(1.2, Math.min(7, slot * 0.68))
+  const slot = count > 0 ? innerW / count : innerW
+  const bodyW = Math.max(1.2, Math.min(9, slot * 0.68))
 
   const xAt = (i: number) => {
-    if (bars.length <= 1) return pad.left + innerW / 2
+    if (count <= 1) return pad.left + innerW / 2
     if (candle) return pad.left + (i + 0.5) * slot
-    return pad.left + (i / (bars.length - 1)) * innerW
+    return pad.left + (i / (count - 1)) * innerW
   }
 
   const yAt = (price: number) => {
@@ -98,18 +112,25 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
     return pad.top + (1 - (price - stats.min) / stats.range) * chartH
   }
 
+  const indexFromX = (clientX: number, rectLeft: number) => {
+    const x = clientX - rectLeft
+    const t = (x - pad.left) / innerW
+    const local = Math.round(t * Math.max(count - 1, 0))
+    return Math.max(0, Math.min(bars.length - 1, start + Math.max(0, Math.min(count - 1, local))))
+  }
+
   const linePath = useMemo(() => {
-    if (candle || bars.length < 2) return ''
-    return bars.map((b, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yAt(b.close)}`).join(' ')
-  }, [bars, candle, stats, width])
+    if (candle || visible.length < 2) return ''
+    return visible.map((b, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i)} ${yAt(b.close)}`).join(' ')
+  }, [visible, candle, stats, width, count])
 
   const areaPath = useMemo(() => {
     if (!linePath) return ''
-    const lastX = xAt(bars.length - 1)
+    const lastX = xAt(visible.length - 1)
     const firstX = xAt(0)
     const baseY = pad.top + chartH
     return `${linePath} L ${lastX} ${baseY} L ${firstX} ${baseY} Z`
-  }, [linePath, bars.length, chartH])
+  }, [linePath, visible.length, chartH])
 
   const maPath = (series: Array<number | null>) => {
     let d = ''
@@ -123,25 +144,85 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
   }
 
   const last = bars[bars.length - 1]
-  const active = hover !== null ? bars[hover] : last
-  const activeIdx = hover ?? bars.length - 1
+  const active = hover !== null ? bars[hover] : visible[visible.length - 1] ?? last
+  const activeLocal = hover !== null ? hover - start : visible.length - 1
   const up = active ? active.close >= active.open : true
   const vsPrev = prevClose && active ? active.close - prevClose : active ? active.close - active.open : 0
   const lineUp = last && prevClose ? last.close >= prevClose : last ? last.close >= last.open : true
   const stroke = lineUp ? UP : DOWN
 
-  const onPointer = (e: ReactPointerEvent<SVGSVGElement>) => {
+  const applyHover = (e: ReactPointerEvent<SVGSVGElement>) => {
     if (bars.length === 0) return
     const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const t = (x - pad.left) / innerW
-    const i = Math.round(t * (bars.length - 1))
-    setHover(Math.max(0, Math.min(bars.length - 1, i)))
+    setHover(indexFromX(e.clientX, rect.left))
   }
 
-  const axisLabels = stats
-    ? [stats.max, (stats.max + stats.min) / 2, stats.min].map((v) => v)
-    : []
+  const onPointerDown = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (bars.length === 0 || e.button !== 0) return
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    e.currentTarget.setPointerCapture(e.pointerId)
+    if (pointersRef.current.size === 2) {
+      const pts = [...pointersRef.current.values()]
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      pinchRef.current = { dist, view }
+      dragRef.current = null
+      return
+    }
+    dragRef.current = { x: e.clientX, view, panning: false }
+    applyHover(e)
+  }
+
+  const onPointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (pointersRef.current.has(e.pointerId)) {
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    }
+    if (pinchRef.current && pointersRef.current.size >= 2) {
+      const pts = [...pointersRef.current.values()]
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      if (pinchRef.current.dist > 8) {
+        const factor = pinchRef.current.dist / Math.max(dist, 8)
+        const anchor = hover ?? view.end - 1
+        setView(zoomView(pinchRef.current.view, bars.length, factor, anchor))
+      }
+      return
+    }
+    const drag = dragRef.current
+    if (drag) {
+      const dx = e.clientX - drag.x
+      if (!drag.panning && Math.abs(dx) > 6) drag.panning = true
+      if (drag.panning) {
+        const delta = Math.round(dx / Math.max(slot, 2))
+        setView(panView(drag.view, bars.length, delta))
+        setHover(null)
+        return
+      }
+    }
+    applyHover(e)
+  }
+
+  const onPointerUp = (e: ReactPointerEvent<SVGSVGElement>) => {
+    pointersRef.current.delete(e.pointerId)
+    if (pointersRef.current.size < 2) pinchRef.current = null
+    if (pointersRef.current.size === 0) dragRef.current = null
+  }
+
+  useEffect(() => {
+    const el = svgRef.current
+    if (!el) return
+    const onWheel = (event: WheelEvent) => {
+      if (bars.length === 0) return
+      event.preventDefault()
+      const rect = el.getBoundingClientRect()
+      const anchor = indexFromX(event.clientX, rect.left)
+      const factor = event.deltaY > 0 ? 1.12 : 0.88
+      setView((prev) => zoomView(prev, bars.length, factor, anchor))
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [bars.length, start, count, innerW, width])
+
+  const axisLabels = stats ? [stats.max, (stats.max + stats.min) / 2, stats.min] : []
+  const dragging = Boolean(dragRef.current?.panning)
 
   return (
     <div ref={wrapRef} className={cn('w-full select-none', className)}>
@@ -159,9 +240,9 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
                   {active.changePercent >= 0 ? '+' : ''}{active.changePercent.toFixed(2)}%
                 </span>
               )}
-              {ma5[activeIdx] != null && <span style={{ color: MA5 }}>MA5 {ma5[activeIdx]!.toFixed(2)}</span>}
-              {ma10[activeIdx] != null && <span style={{ color: MA10 }}>MA10 {ma10[activeIdx]!.toFixed(2)}</span>}
-              {ma20[activeIdx] != null && <span style={{ color: MA20 }}>MA20 {ma20[activeIdx]!.toFixed(2)}</span>}
+              {ma5[activeLocal] != null && <span style={{ color: MA5 }}>MA5 {ma5[activeLocal]!.toFixed(2)}</span>}
+              {ma10[activeLocal] != null && <span style={{ color: MA10 }}>MA10 {ma10[activeLocal]!.toFixed(2)}</span>}
+              {ma20[activeLocal] != null && <span style={{ color: MA20 }}>MA20 {ma20[activeLocal]!.toFixed(2)}</span>}
             </>
           ) : (
             <>
@@ -175,13 +256,19 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
       )}
 
       <svg
+        ref={svgRef}
         width="100%"
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="touch-none"
-        onPointerDown={onPointer}
-        onPointerMove={onPointer}
-        onPointerLeave={() => setHover(null)}
+        className={cn('touch-none', dragging ? 'cursor-grabbing' : 'cursor-grab')}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onPointerLeave={() => {
+          if (!dragRef.current) setHover(null)
+        }}
+        onDoubleClick={() => setView(defaultView(period, bars.length))}
       >
         <defs>
           <linearGradient id={`kfill-${gid}`} x1="0" y1="0" x2="0" y2="1">
@@ -233,7 +320,7 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
           </>
         )}
 
-        {stats && candle && bars.map((b, i) => {
+        {stats && candle && visible.map((b, i) => {
           const x = pad.left + (i + 0.5) * slot
           const isUp = b.close >= b.open
           const color = isUp ? UP : DOWN
@@ -253,8 +340,7 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
                 y={top}
                 width={bodyW}
                 height={h}
-                fill={isUp ? color : color}
-                fillOpacity={isUp ? 1 : 1}
+                fill={color}
                 stroke={color}
                 strokeWidth="0.6"
               />
@@ -270,7 +356,7 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
           )
         })}
 
-        {stats && !candle && bars.map((b, i) => {
+        {stats && !candle && visible.map((b, i) => {
           const x = xAt(i)
           const isUp = prevClose !== undefined ? b.close >= prevClose : b.close >= b.open
           const volY0 = height - pad.bottom
@@ -297,35 +383,41 @@ export function KlineChart({ bars, period, prevClose, loading, className }: Klin
           </>
         )}
 
-        {stats && hover !== null && active && (
+        {stats && hover !== null && active && hover >= start && hover < view.end && (
           <>
             <line
-              x1={xAt(hover)}
-              x2={xAt(hover)}
+              x1={xAt(hover - start)}
+              x2={xAt(hover - start)}
               y1={pad.top}
               y2={height - pad.bottom}
               stroke="#8E8E93"
               strokeWidth="0.8"
               strokeDasharray="2 2"
             />
-            <circle cx={xAt(hover)} cy={yAt(active.close)} r="3" fill={stroke} />
+            <circle cx={xAt(hover - start)} cy={yAt(active.close)} r="3" fill={stroke} />
           </>
         )}
 
-        {bars.length > 1 && [0, Math.floor(bars.length / 2), bars.length - 1].map((i) => (
+        {count > 1 && [0, Math.floor(count / 2), count - 1].map((i) => (
           <text
             key={`t-${i}`}
             x={xAt(i)}
             y={height - 2}
-            textAnchor={i === 0 ? 'start' : i === bars.length - 1 ? 'end' : 'middle'}
+            textAnchor={i === 0 ? 'start' : i === count - 1 ? 'end' : 'middle'}
             fill="#C7C7CC"
             fontSize="9"
             fontFamily="ui-monospace, monospace"
           >
-            {formatAxisTime(bars[i].time, period)}
+            {formatAxisTime(visible[i].time, period)}
           </text>
         ))}
       </svg>
+      {bars.length > 0 && (
+        <p className="text-[10px] text-neutral-400 mt-1">
+          拖动看更早/更新 · 滚轮或双指缩放 · 双击回到最新
+          {view.size < bars.length ? ` · 显示 ${visible.length}/${bars.length}` : ''}
+        </p>
+      )}
     </div>
   )
 }

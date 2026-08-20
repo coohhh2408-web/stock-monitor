@@ -2,6 +2,7 @@ import type { AlertRule, BarkSettings, DesktopAlertSettings } from '@/types/aler
 import type { QuoteItem } from '@/types/market'
 import type { PositionItem, TTradeRecord } from '@/types/position'
 import type { AppSettings } from '@/types/settings'
+import type { PricePlan } from '@/types/pricePlan'
 
 export type CloudSyncStatus = 'idle' | 'syncing' | 'error' | 'offline'
 
@@ -36,6 +37,7 @@ export interface SyncPayload {
   bark: BarkSettings
   desktop: DesktopAlertSettings
   settings: AppSettings
+  pricePlans?: Record<string, PricePlan>
 }
 
 export type SyncPayloadInput = Omit<SyncPayload, 'version' | 'updatedAt'>
