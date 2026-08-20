@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { IncomingCallPayload } from '@/types/alert'
+import { previewIncomingCall } from '@/services/notificationService'
 
 const INCOMING_CALL_EVENT = 'stock-monitor:incoming-call'
+
+function hashName(): string {
+  return window.location.hash.replace(/^#\/?/, '')
+}
 
 export function IncomingCallHost() {
   const [queue, setQueue] = useState<IncomingCallPayload[]>([])
@@ -14,6 +19,19 @@ export function IncomingCallHost() {
     }
     window.addEventListener(INCOMING_CALL_EVENT, onCall)
     return () => window.removeEventListener(INCOMING_CALL_EVENT, onCall)
+  }, [])
+
+  useEffect(() => {
+    const maybePush = () => {
+      const h = hashName()
+      if (h === 'push' || h === 'demo-alert') previewIncomingCall()
+    }
+    const id = window.setTimeout(maybePush, 500)
+    window.addEventListener('hashchange', maybePush)
+    return () => {
+      window.clearTimeout(id)
+      window.removeEventListener('hashchange', maybePush)
+    }
   }, [])
 
   const current = queue[0]

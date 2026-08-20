@@ -258,7 +258,13 @@ export function StockDetailPanel({
         <div className="relative min-h-[160px]">
           {tab === 'ai' && (
             <div>
-              <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} pick={pick} />
+              <BuffettMungerBrief
+                key={`${display.code}-${pick?.preset ?? 'watch'}`}
+                stock={display}
+                financials={financials}
+                financialsStatus={financialsStatus}
+                pick={pick}
+              />
               {aiDiagnosis.status === 'loading' ? (
                 <div className="ai-glow-card">
                   <SkeletonText lines={4} />

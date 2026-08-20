@@ -76,7 +76,13 @@ export function StockScreener({ isMobile = false }: { isMobile?: boolean }) {
         onChange={setPreset}
       />
 
-      <p className="text-[12px] text-neutral-500 leading-relaxed mb-3">{presetMeta.hint}</p>
+      <p className="text-[13px] text-neutral-700 leading-relaxed mb-1">{presetMeta.hint}</p>
+      {preset === 'in-band' && (
+        <p className="text-[12px] text-neutral-500 leading-relaxed mb-3">
+          大市值里银行、保险更容易进习惯带，因为市盈率低。不是筛坏了。要看消费，点上面「消费特许经营权」。点一行能看到入选逻辑和巴芒段短评。
+        </p>
+      )}
+      {preset !== 'in-band' && <div className="mb-3" />}
 
       {status === 'loading' && (
         <p className="text-[13px] text-neutral-400 py-12 text-center">正在拉取市值靠前的样本…</p>
@@ -104,10 +110,10 @@ export function StockScreener({ isMobile = false }: { isMobile?: boolean }) {
 
       {status === 'ready' && hits.length > 0 && (
         <>
-          <p className="text-[12px] text-neutral-400 mb-2">
+          <p className="text-[13px] text-neutral-600 mb-2">
             {universe.length} 只样本里，{hits.length} 只符合「{presetMeta.label}」
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {hits.map((hit) => (
               <ScreenerRow
                 key={`${hit.quote.market}:${hit.quote.code}`}
@@ -180,32 +186,38 @@ function ScreenerRow({
   const listed = formatListedCode(hit.quote.code, hit.quote.market)
   const gap = ((hit.habitPrice - hit.quote.price) / hit.quote.price) * 100
   return (
-    <li className="rounded-2xl border border-black/[0.06] bg-white px-4 py-3">
+    <li className="quote-card !cursor-default">
       <button type="button" onClick={onOpen} className="w-full text-left">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[16px] font-semibold text-neutral-900 truncate leading-tight">{hit.quote.name}</p>
-            <p className="text-[12px] text-neutral-400 font-mono tabular mt-0.5">
+            <p className="text-[17px] font-semibold text-neutral-900 truncate leading-tight">{hit.quote.name}</p>
+            <p className="text-[12px] text-neutral-500 font-mono tabular mt-0.5">
               {listed} · {hit.kindLabel}
             </p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-[16px] font-semibold tabular text-neutral-900">
+            <p className="text-[17px] font-semibold tabular text-neutral-900">
               {formatQuotePrice(hit.quote.price, hit.quote.market)}
             </p>
-            <p className="text-[11px] tabular text-neutral-400 mt-0.5">{formatPercent(hit.quote.changePercent)}</p>
+            <p className="text-[12px] tabular text-neutral-500 mt-0.5">{formatPercent(hit.quote.changePercent)}</p>
           </div>
         </div>
-        <p className="text-[12px] text-neutral-600 leading-relaxed mt-2">
-          {hit.peNow.toFixed(0)}x · 习惯 {hit.peHabit.toFixed(0)}x · {hit.statusLabel}
+        <p className="mt-2 text-[12px] font-medium text-neutral-800">
+          当前 {hit.peNow.toFixed(0)}x · 习惯 {hit.peHabit.toFixed(0)}x · {hit.statusLabel}
           {hit.status !== 'in-band' ? ` · 观察价 ${formatQuotePrice(hit.habitPrice, hit.quote.market)}（${gap.toFixed(0)}%）` : ''}
         </p>
+        <p className="mt-1.5 text-[13px] text-neutral-700 leading-relaxed">
+          入选原因：归为{hit.kindLabel}，习惯市盈率约 {hit.peHabit.toFixed(0)} 倍，现价大约 {hit.peNow.toFixed(0)} 倍。点开看完整逻辑和巴芒段短评。
+        </p>
       </button>
-      <div className="mt-2 flex justify-end">
+      <div className="mt-3 flex items-center justify-end gap-3">
+        <button type="button" onClick={onOpen} className="text-[13px] font-medium text-[#007AFF]">
+          看入选逻辑和三人短评
+        </button>
         {onBoard ? (
           <span className="text-[12px] text-neutral-400">已在看板</span>
         ) : (
-          <button type="button" onClick={onAdd} className="text-[12px] font-medium text-[#007AFF]">
+          <button type="button" onClick={onAdd} className="text-[13px] font-medium text-neutral-800">
             加入看板
           </button>
         )}

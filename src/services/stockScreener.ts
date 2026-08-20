@@ -53,13 +53,40 @@ export function scoreScreenerQuote(quote: QuoteItem): ScreenerHit | null {
 export function runScreener(quotes: QuoteItem[], preset: ScreenerPreset): ScreenerHit[] {
   const hits = quotes.map(scoreScreenerQuote).filter((row): row is ScreenerHit => row !== null)
   const filtered = hits.filter((row) => matchPreset(row, preset))
-  return filtered.sort((a, b) => {
+  const ranked = filtered.sort((a, b) => {
     if (a.status !== b.status) {
       const rank = { 'in-band': 0, near: 1, far: 2 }
       return rank[a.status] - rank[b.status]
     }
     return a.vsHabit - b.vsHabit
   })
+  return roundRobinByKind(ranked)
+}
+
+/** 避免「进入习惯带」首页全是银行保险：按生意类型轮流出。 */
+function roundRobinByKind(hits: ScreenerHit[]): ScreenerHit[] {
+  const buckets = new Map<string, ScreenerHit[]>()
+  for (const hit of hits) {
+    const list = buckets.get(hit.kind) ?? []
+    list.push(hit)
+    buckets.set(hit.kind, list)
+  }
+  const kinds = [...buckets.keys()]
+  const out: ScreenerHit[] = []
+  let index = 0
+  while (out.length < hits.length) {
+    let added = false
+    for (const kind of kinds) {
+      const row = buckets.get(kind)?.[index]
+      if (row) {
+        out.push(row)
+        added = true
+      }
+    }
+    if (!added) break
+    index += 1
+  }
+  return out
 }
 
 function matchPreset(row: ScreenerHit, preset: ScreenerPreset): boolean {

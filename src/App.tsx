@@ -51,6 +51,7 @@ function AppShell() {
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     if (typeof window === 'undefined') return 'market'
     const h = window.location.hash.replace(/^#\/?/, '')
+    if (h === 'push' || h === 'demo-alert') return 'alert'
     return h === 'alert' || h === 'position' || h === 'market' || h === 'screener' ? h : 'market'
   })
   const [settingsOpen, setSettingsOpen] = useState(false)

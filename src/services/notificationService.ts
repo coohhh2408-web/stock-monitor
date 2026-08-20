@@ -124,8 +124,8 @@ export function previewIncomingCall(): void {
     id: `preview-${Date.now()}`,
     coverName: '吴女士',
     coverLine: '手机  138****6621',
-    title: '到价提醒预览',
-    body: '接听后才显示股价正文。办公室里看起来像一通普通来电。',
+    title: '贵州茅台 提醒触发',
+    body: '贵州茅台 现价 1688.50，已触发「涨破 ¥1650.00」',
   }
   deliverDesktopAlert(
     { systemBanner: false, alarmSound: true, ttsVoice: false, popupAlert: true },
