@@ -18,6 +18,7 @@ import {
   type GateState,
   type ValueChecklist,
 } from '@/services/valueChecklist'
+import { classifyStrike } from '@/services/strikeZone'
 import { answerLabel, type GateAnswer, type InfoRichness } from '@/services/valueSkill'
 import { buildEarningsBrief, type EarningsBrief } from '@/services/earningsBrief'
 import type { FinancialsPack, QuoteItem } from '@/types/market'
@@ -97,6 +98,7 @@ export function BuffettMungerBrief({
 }
 
 function ChecklistCard({ brief, stock }: { brief: ValueChecklist; stock: QuoteItem }) {
+  const lane = classifyStrike(brief)
   return (
     <article className="inset-group overflow-hidden">
       <div className="px-4 py-3.5">
@@ -105,6 +107,16 @@ function ChecklistCard({ brief, stock }: { brief: ValueChecklist; stock: QuoteIt
           <VerdictChip verdict={brief.verdict} />
         </div>
         <p className="text-[13px] text-neutral-600 leading-relaxed">{brief.reason}</p>
+        {lane === 'zone' && (
+          <p className="text-[12px] text-[#FF3B30] mt-2 leading-relaxed">
+            当前落在击球点：质量关未过关为 0，且进入习惯买点带。不是荐股。
+          </p>
+        )}
+        {lane === 'sweet' && (
+          <p className="text-[12px] text-neutral-500 mt-2 leading-relaxed">
+            只到甜蜜点：倍数到了，质量关未知或未过关，还不能算击球点。
+          </p>
+        )}
       </div>
 
       <div className="px-4 py-3 bg-neutral-50/80 border-y border-neutral-100">
@@ -513,6 +525,7 @@ function ProvenanceNote() {
           <p>习惯买点 = 现价 ×（该行业习惯市盈率 ÷ 当前市盈率）。巴菲特/芒格/段永平只是同一公式的三种宽严，不是三人原话或持仓。</p>
           <p>结构借鉴了开源研究流程的写法（两分钟筛选、信息分级、数字用代码算）。不是微调了巴菲特模型，也不是股东信摘要。</p>
           <p>缺市盈率就不报价。这不是内在价值，也不能当投顾建议。收费卖的是清单和提醒，不是荐股。</p>
+          <p>行情页「击球点」只扫当前看板，不是全 A 股。好球区要求质量关未过关为 0 且有产品内置说明；甜蜜点仍是习惯买点带。看板扫描不拉年报。</p>
         </div>
       )}
     </div>

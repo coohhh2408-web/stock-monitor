@@ -3,6 +3,7 @@ import { StockSearchBar } from './StockSearchBar'
 import { QuoteCard } from './QuoteCard'
 import { StockDetailPanel } from './StockDetailPanel'
 import { InfoCenter } from './InfoCenter'
+import { StrikeZone } from './StrikeZone'
 import { Shelf } from '@/components/ui/Shelf'
 import { useAppStore } from '@/store/AppStore'
 import { useStockSearch } from '@/hooks/useStockSearch'
@@ -166,6 +167,10 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
         <div className="lockup-card mt-4 px-5 py-12 text-center">
           <p className="text-[17px] text-neutral-500">未找到「{searchQuery}」</p>
         </div>
+      )}
+
+      {quotes.length > 0 && (
+        <StrikeZone quotes={quotes} isMobile={isMobile} onOpen={openDetail} />
       )}
 
       {filteredQuotes.length > 0 && (
