@@ -1,12 +1,14 @@
 import { MiniSparkline } from '@/components/ui/MiniSparkline'
 import { ChangeCapsule, MarketTag } from '@/components/ui/StocksPrimitives'
 import { cn, formatListedCode, formatPrice, formatQuotePrice } from '@/lib/utils'
+import { lightTap } from '@/lib/nativeInit'
 import type { QuoteItem, SparklineDataPoint } from '@/types/market'
 
 interface QuoteCardProps {
   quote: QuoteItem
   sparkline: SparklineDataPoint[]
-  variant?: 'list' | 'grid'
+  variant?: 'list' | 'grid' | 'shelf'
+  className?: string
   onOpen: () => void
   onNewsClick: () => void
   onToggleWatchlist: () => void
@@ -26,6 +28,7 @@ export function QuoteCard({
   quote,
   sparkline,
   variant = 'list',
+  className,
   onOpen,
   onNewsClick,
   onToggleWatchlist,
@@ -34,10 +37,46 @@ export function QuoteCard({
 }: QuoteCardProps) {
   const listed = formatListedCode(quote.code, quote.market)
 
+  if (variant === 'shelf') {
+    return (
+      <article
+        onClick={() => {
+          void lightTap()
+          onOpen()
+        }}
+        className={cn('shelf-card lockup-card press-float relative p-5 min-h-[196px] flex flex-col', className)}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="text-[20px] font-bold text-neutral-900 truncate leading-tight tracking-tight">{quote.name}</h3>
+            <p className="text-[13px] text-neutral-400 font-mono tabular mt-1">{listed}</p>
+          </div>
+          <ChangeCapsule change={quote.change} changePercent={quote.changePercent} compact />
+        </div>
+        <div className="flex-1 flex items-center my-3 pointer-events-none">
+          <MiniSparkline
+            data={sparkline}
+            change={quote.change}
+            width={240}
+            height={56}
+            gradientId={`shelf-${quote.id}`}
+            className="w-full h-[56px]"
+          />
+        </div>
+        <p className="text-[32px] font-semibold tracking-tight font-mono tabular text-neutral-900 leading-none">
+          {formatQuotePrice(quote.price, quote.market)}
+        </p>
+      </article>
+    )
+  }
+
   if (variant === 'grid') {
     return (
       <article
-        onClick={onOpen}
+        onClick={() => {
+          void lightTap()
+          onOpen()
+        }}
         draggable={Boolean(onReorder)}
         onDragStart={(e) => {
           e.dataTransfer.setData('text/quote-id', quote.id)
@@ -127,7 +166,13 @@ export function QuoteCard({
   }
 
   return (
-    <article onClick={onOpen} className="stocks-card relative flex items-center gap-3 !py-3">
+    <article
+      onClick={() => {
+        void lightTap()
+        onOpen()
+      }}
+      className="relative flex items-center gap-3 px-4 py-3 bg-white border-b border-black/[0.06] last:border-0 active:bg-neutral-50"
+    >
       <div className="min-w-0 flex-1">
         <h3 className="text-[17px] font-semibold text-neutral-900 truncate leading-tight">{quote.name}</h3>
         <p className="text-[13px] text-neutral-400 font-mono tabular mt-0.5">{listed}</p>

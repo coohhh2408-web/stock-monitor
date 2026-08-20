@@ -10,12 +10,12 @@ export function TTradeTimeline({ isExpanded, records, positionId }: {
   const filtered = records.filter((r) => r.positionId === positionId)
 
   return (
-    <div className="mt-3 pt-3 border-t border-black/[0.04] space-y-2">
+    <div className="rounded-xl bg-white overflow-hidden mt-2">
       {filtered.length === 0 ? (
-        <p className="text-xs text-neutral-400">暂无做T记录</p>
+        <p className="text-[13px] text-neutral-400 px-3.5 py-3">暂无做T记录</p>
       ) : (
         filtered.map((r) => (
-          <div key={r.id} className="flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-neutral-50">
+          <div key={r.id} className="flex items-center justify-between text-[13px] py-2.5 px-3.5 border-b border-black/[0.06] last:border-0">
             <div className="flex items-center gap-2">
               <span className={cn('font-medium', r.direction === 'sell' ? 'text-[#34C759]' : 'text-[#FF3B30]')}>
                 {r.direction === 'sell' ? '卖' : '买'}

@@ -14,7 +14,7 @@ export function ChangeCapsule({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-white tabular leading-none',
+        'inline-flex items-center justify-center min-w-[62px] rounded-[8px] px-2 py-[6px] text-[13px] font-semibold text-white tabular leading-none',
         isUp ? 'bg-[#FF3B30]' : 'bg-[#34C759]',
       )}
     >

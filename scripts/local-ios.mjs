@@ -4,7 +4,7 @@
  * Linux / 云环境没有 Xcode，只打印说明。
  */
 import os from 'node:os'
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 
 const DEVICE = process.argv.includes('--device')
 
@@ -69,6 +69,18 @@ function startVite() {
   child.unref()
 }
 
+function bootedIPhoneTarget() {
+  try {
+    const out = execFileSync('xcrun', ['simctl', 'list', 'devices', 'booted'], {
+      encoding: 'utf8',
+    })
+    const match = out.match(/iPhone[^\n]*\(([0-9A-F-]{36})\)\s+\(Booted\)/i)
+    return match?.[1] ?? null
+  } catch {
+    return null
+  }
+}
+
 const macHelp = `
 请在 Mac 上用 Cursor 打开本仓库：
 
@@ -111,4 +123,10 @@ if (DEVICE) {
 }
 
 console.log('正在启动模拟器（cap run）…')
-await run('npx', ['cap', 'run', 'ios', '--no-sync'])
+const target = bootedIPhoneTarget()
+await run(
+  'npx',
+  target
+    ? ['cap', 'run', 'ios', '--no-sync', '--target', target]
+    : ['cap', 'run', 'ios', '--no-sync'],
+)

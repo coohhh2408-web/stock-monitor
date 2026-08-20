@@ -84,8 +84,8 @@ export function StockSearchBar({
             className={cn(
               'w-full pl-9 pr-4 text-sm placeholder:text-neutral-400 focus:outline-none',
               isMobile
-                ? 'py-2 rounded-[10px] bg-black/[0.06]'
-                : 'py-2.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-black/[0.03] focus:ring-2 focus:ring-[#007AFF]/25 transition-shadow',
+                ? 'py-2.5 rounded-[12px] bg-black/[0.06]'
+                : 'py-2.5 rounded-2xl glass-control focus:ring-2 focus:ring-[#007AFF]/20 transition-shadow',
             )}
           />
         </div>
@@ -134,22 +134,22 @@ export function StockSearchBar({
         )}
       </div>
 
-      <div className={cn('flex gap-2', isMobile ? 'overflow-x-auto pb-0.5 -mx-1 px-1' : 'flex-wrap gap-1.5 pt-0.5')}>
+      <div className={cn('flex', isMobile ? 'overflow-x-auto pb-0.5 -mx-1 px-1' : 'flex-wrap gap-1.5 pt-0.5')}>
         {FILTER_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onCategoryChange(opt.value)}
             className={cn(
-              'font-medium transition-colors shrink-0',
+              'font-medium transition-colors shrink-0 active:opacity-60',
               isMobile
                 ? cn(
-                    'px-3 py-1 rounded-full text-[13px]',
-                    category === opt.value ? 'bg-neutral-800 text-white' : 'bg-black/[0.06] text-neutral-600',
+                    'pr-4 py-1 text-[15px]',
+                    category === opt.value ? 'text-neutral-900' : 'text-neutral-400',
                   )
                 : cn(
-                    'px-2 py-0.5 rounded-full text-[10px]',
+                    'px-2.5 py-1 rounded-full text-[11px]',
                     category === opt.value
-                      ? 'bg-white/90 text-neutral-600 shadow-sm'
+                      ? 'bg-white/90 text-neutral-800 shadow-sm'
                       : 'text-neutral-400 hover:text-neutral-500',
                   ),
             )}

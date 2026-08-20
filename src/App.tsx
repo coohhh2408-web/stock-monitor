@@ -10,6 +10,7 @@ import { AlertManager } from '@/components/AlertManager/AlertManager'
 import { useAppStore } from '@/store/AppStore'
 import { useIsMobileLayout } from '@/hooks/useIsMobileLayout'
 import { sessionLabel } from '@/lib/marketHours'
+import { lightTap } from '@/lib/nativeInit'
 import type { AppTab } from '@/types/features'
 
 function useStatusClock() {
@@ -37,9 +38,12 @@ function SquareIconButton({
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        void lightTap()
+        onClick()
+      }}
       aria-label={label}
-      className="w-9 h-9 rounded-[10px] bg-white hover:bg-white border border-black/[0.04] flex items-center justify-center text-neutral-800 hover:text-neutral-900 transition-colors shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+      className="w-9 h-9 rounded-full glass-control press-float flex items-center justify-center text-neutral-800"
     >
       {children}
     </button>
@@ -62,12 +66,6 @@ function AppShell() {
     window.history.replaceState(null, '', `#${tab}`)
   }
 
-  const tabTitles: Record<AppTab, string> = {
-    market: '行情',
-    position: '持仓',
-    alert: '提醒',
-  }
-
   const statusText = quoteFeed.status === 'error'
     ? '行情暂不可用 · 显示上次价格'
     : quoteFeed.status === 'mock'
@@ -79,23 +77,28 @@ function AppShell() {
   return (
     <div className={`min-h-screen flex flex-col ${isMobile ? 'bg-[#F2F2F7]' : 'desktop-mesh-bg'}`}>
       {isMobile ? (
-        <header className="ios-header sticky top-0 z-30 bg-[#F2F2F7]/92 backdrop-blur-xl">
-          <div className="max-w-2xl mx-auto px-4 h-11 flex items-center justify-between">
-            <h1 className="text-[17px] font-semibold text-neutral-900">{tabTitles[activeTab]}</h1>
+        <header className="ios-header sticky top-0 z-30">
+          <div className="max-w-2xl mx-auto px-4 h-11 flex items-center justify-end">
             <div className="flex items-center -mr-1">
               {activeTab === 'market' && (
                 <button
-                  onClick={() => void refreshQuotes()}
+                  onClick={() => {
+                    void lightTap()
+                    void refreshQuotes()
+                  }}
                   aria-label="刷新行情"
-                  className="w-11 h-11 flex items-center justify-center text-[#007AFF]"
+                  className="w-11 h-11 flex items-center justify-center text-[#007AFF] active:scale-90 transition-transform"
                 >
                   <RefreshIcon />
                 </button>
               )}
               <button
-                onClick={() => setSettingsOpen(true)}
+                onClick={() => {
+                  void lightTap()
+                  setSettingsOpen(true)
+                }}
                 aria-label="设置"
-                className="w-11 h-11 flex items-center justify-center text-[#007AFF]"
+                className="w-11 h-11 flex items-center justify-center text-[#007AFF] active:scale-90 transition-transform"
               >
                 <SettingsIcon />
               </button>

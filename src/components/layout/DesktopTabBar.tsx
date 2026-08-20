@@ -57,10 +57,10 @@ export function DesktopTabBar({
             key={tab.value}
             onClick={() => onChange(tab.value)}
             className={cn(
-              'inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-medium transition-all',
+              'inline-flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-medium transition-all press-float',
               active
-                ? 'bg-white text-neutral-900 shadow-[0_4px_14px_rgba(0,0,0,0.1)]'
-                : 'bg-black/[0.045] text-neutral-500 hover:bg-black/[0.07]',
+                ? 'bg-white/90 text-neutral-900 shadow-[0_8px_20px_rgba(0,0,0,0.1)] backdrop-blur-xl'
+                : 'bg-white/40 text-neutral-500 hover:bg-white/55 backdrop-blur-md',
             )}
           >
             {tab.icon}

@@ -13,9 +13,13 @@ export function AlertManager({ isMobile = false }: { isMobile?: boolean }) {
   return (
     <div>
       {isMobile && (
-        <div className="flex items-center justify-end mb-4">
+        <header className="mb-5 flex items-end justify-between gap-3">
+          <div>
+            <h1 className="text-[34px] font-bold tracking-tight text-neutral-900 leading-none">提醒</h1>
+            <p className="text-[15px] text-neutral-500 mt-2">到价再通知，不用一直盯盘</p>
+          </div>
           <ShareViewButton onGenerate={createShareLink} />
-        </div>
+        </header>
       )}
 
       <div className={isMobile ? 'space-y-5' : 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start'}>

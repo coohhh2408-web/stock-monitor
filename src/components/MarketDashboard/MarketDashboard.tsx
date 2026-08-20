@@ -3,12 +3,14 @@ import { StockSearchBar } from './StockSearchBar'
 import { QuoteCard } from './QuoteCard'
 import { StockDetailPanel } from './StockDetailPanel'
 import { InfoCenter } from './InfoCenter'
+import { Shelf } from '@/components/ui/Shelf'
 import { useAppStore } from '@/store/AppStore'
 import { useStockSearch } from '@/hooks/useStockSearch'
+import { sessionLabel } from '@/lib/marketHours'
 import type { MarketCategory, QuoteItem } from '@/types/market'
 
 export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
-  const { quotes, addStock, removeStock, toggleWatchlist, getSparkline, getAIDiagnosis, generateAI, reorderQuotes } = useAppStore()
+  const { quotes, addStock, removeStock, toggleWatchlist, getSparkline, reorderQuotes, quoteFeed } = useAppStore()
   const [category, setCategory] = useState<MarketCategory>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCode, setSelectedCode] = useState<string | null>(null)
@@ -51,10 +53,13 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
     if (match) openDetail(match)
   }
 
-  const aiDiagnosis = selectedStock ? getAIDiagnosis(selectedStock) : { status: 'idle' as const }
-
   const showEmptyHint = filteredQuotes.length === 0 && searchQuery.trim().length > 0
-  const cardVariant = isMobile ? 'list' : 'grid'
+  const mood =
+    quoteFeed.status === 'error'
+      ? '行情暂不可用'
+      : quoteFeed.status === 'mock'
+        ? '模拟行情'
+        : sessionLabel(quotes)
 
   const handleRemove = (quoteId: string) => {
     if (window.confirm('确定从看板移除此标的？相关提醒规则也会删除。')) {
@@ -64,12 +69,10 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
 
   return (
     <div>
-      {!isMobile && (
-        <header className="mb-4 flex items-end justify-between gap-3">
-          <h2 className="text-[17px] font-semibold text-neutral-800 tracking-tight">实时行情看板</h2>
-          <p className="text-[11px] text-neutral-400 shrink-0">拖拽卡片左侧 ≡ 可任意位置排序</p>
-        </header>
-      )}
+      <header className="mb-4">
+        <h1 className="text-[34px] font-bold tracking-tight text-neutral-900 leading-none">行情</h1>
+        <p className="text-[15px] text-neutral-500 mt-2">{mood}</p>
+      </header>
 
       <StockSearchBar
         category={category}
@@ -81,31 +84,56 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
         onAddStock={addStock}
       />
 
-      <div className={isMobile ? 'flex flex-col gap-2.5' : 'grid grid-cols-3 gap-4'}>
-        {filteredQuotes.map((quote) => (
-          <QuoteCard
-            key={quote.id}
-            quote={quote}
-            variant={cardVariant}
-            sparkline={getSparkline(quote.code, quote.price)}
-            onOpen={() => openDetail(quote)}
-            onNewsClick={() => openDetail(quote)}
-            onToggleWatchlist={() => toggleWatchlist(quote.id)}
-            onRemove={() => handleRemove(quote.id)}
-            onReorder={isMobile ? undefined : reorderQuotes}
-          />
-        ))}
-      </div>
+      {isMobile ? (
+        filteredQuotes.length > 0 && (
+          <Shelf title="继续看">
+            {filteredQuotes.map((quote) => (
+              <QuoteCard
+                key={quote.id}
+                quote={quote}
+                variant="shelf"
+                sparkline={getSparkline(quote.code, quote.price)}
+                onOpen={() => openDetail(quote)}
+                onNewsClick={() => openDetail(quote)}
+                onToggleWatchlist={() => toggleWatchlist(quote.id)}
+                onRemove={() => handleRemove(quote.id)}
+              />
+            ))}
+          </Shelf>
+        )
+      ) : (
+        filteredQuotes.length > 0 && (
+          <section className="mt-2">
+            <h2 className="text-[22px] font-bold tracking-tight text-neutral-900 mb-3">继续看</h2>
+            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredQuotes.map((quote) => (
+                <QuoteCard
+                  key={quote.id}
+                  quote={quote}
+                  variant="shelf"
+                  className="!flex-none !max-w-none w-full"
+                  sparkline={getSparkline(quote.code, quote.price)}
+                  onOpen={() => openDetail(quote)}
+                  onNewsClick={() => openDetail(quote)}
+                  onToggleWatchlist={() => toggleWatchlist(quote.id)}
+                  onRemove={() => handleRemove(quote.id)}
+                  onReorder={reorderQuotes}
+                />
+              ))}
+            </div>
+          </section>
+        )
+      )}
 
       {hiddenByFilter && (
-        <div className="mt-3 stocks-card glass-card !p-4 flex items-center justify-between">
+        <div className="mt-4 lockup-card p-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-neutral-600">「{hiddenByFilter.name}」已在看板中</p>
-            <p className="text-xs text-neutral-400 mt-0.5">当前分类筛选下不可见，可切换到「全部」查看</p>
+            <p className="text-[15px] text-neutral-800">「{hiddenByFilter.name}」已在看板中</p>
+            <p className="text-[13px] text-neutral-400 mt-0.5">当前分类下不可见</p>
           </div>
           <button
             onClick={() => setCategory('all')}
-            className="text-xs font-medium text-[#007AFF] bg-[#007AFF]/10 px-3 py-1.5 rounded-full hover:bg-[#007AFF]/15 transition-colors shrink-0"
+            className="text-[15px] font-medium text-[#007AFF] shrink-0"
           >
             查看全部
           </button>
@@ -113,32 +141,30 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
       )}
 
       {showEmptyHint && catalogHits.length > 0 && (
-        <div className="mt-3 stocks-card glass-card !p-4 flex items-center justify-between">
+        <div className="mt-4 lockup-card p-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-neutral-600">找到 {catalogHits[0].name}</p>
-            <p className="text-xs text-neutral-400 font-mono tabular mt-0.5">{catalogHits[0].code}</p>
+            <p className="text-[15px] text-neutral-800">找到 {catalogHits[0].name}</p>
+            <p className="text-[13px] text-neutral-400 font-mono tabular mt-0.5">{catalogHits[0].code}</p>
           </div>
           <button
             onClick={() => addStock(catalogHits[0])}
-            className="text-xs font-medium text-[#007AFF] bg-[#007AFF]/10 px-3 py-1.5 rounded-full hover:bg-[#007AFF]/15 transition-colors"
+            className="text-[15px] font-medium text-[#007AFF]"
           >
-            加入看板
+            加入
           </button>
         </div>
       )}
 
       {filteredQuotes.length === 0 && !showEmptyHint && !hiddenByFilter && (
-        <div className="text-center py-20">
-          <p className="text-neutral-400 text-base">
-            {searchQuery.trim() ? '暂无匹配的标的，试试搜索添加' : '暂无标的，搜索添加自选'}
-          </p>
+        <div className="lockup-card mt-4 px-5 py-14 text-center">
+          <p className="text-[17px] font-semibold text-neutral-900">还没有标的</p>
+          <p className="text-[15px] text-neutral-400 mt-2">搜索代码或名称，滑过来一张卡片</p>
         </div>
       )}
 
       {filteredQuotes.length === 0 && showEmptyHint && catalogHits.length === 0 && !hiddenByFilter && (
-        <div className="text-center py-16">
-          <p className="text-neutral-400 text-base">未找到「{searchQuery}」</p>
-          <p className="text-sm text-neutral-400 mt-1">请检查名称或代码是否正确</p>
+        <div className="lockup-card mt-4 px-5 py-12 text-center">
+          <p className="text-[17px] text-neutral-500">未找到「{searchQuery}」</p>
         </div>
       )}
 
@@ -149,9 +175,7 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
       <StockDetailPanel
         isOpen={panelOpen}
         stock={selectedStock}
-        aiDiagnosis={aiDiagnosis}
         onClose={() => setPanelOpen(false)}
-        onGenerateAI={(stock) => generateAI(stock)}
         isMobile={isMobile}
       />
     </div>

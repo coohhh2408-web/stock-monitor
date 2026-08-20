@@ -3,6 +3,17 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"SF Pro Text"',
+          '"SF Pro Display"',
+          '"PingFang SC"',
+          '"Helvetica Neue"',
+          'sans-serif',
+        ],
+      },
       colors: {
         apple: {
           red: '#FF3B30',

@@ -46,12 +46,6 @@ export function BuffettMungerBrief({
 
   return (
     <section className="mb-4">
-      <div className="flex items-end justify-between gap-3 mb-2.5">
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-neutral-800">价值清单</p>
-          <p className="text-[11px] text-neutral-400 mt-0.5">买点用盘口，质量关用最新财报</p>
-        </div>
-      </div>
       <SegmentedControl
         options={[
           { value: 'list' as const, label: '清单' },
@@ -104,7 +98,7 @@ export function BuffettMungerBrief({
 
 function ChecklistCard({ brief, stock }: { brief: ValueChecklist; stock: QuoteItem }) {
   return (
-    <article className="rounded-2xl border border-black/[0.06] bg-white overflow-hidden">
+    <article className="inset-group overflow-hidden">
       <div className="px-4 py-3.5">
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <p className="text-[16px] font-semibold text-neutral-900 leading-snug">{brief.headline}</p>
@@ -249,14 +243,14 @@ function EarningsCard({
 }) {
   if (status === 'loading') {
     return (
-      <article className="rounded-2xl border border-black/[0.06] bg-white px-4 py-8 text-center">
+      <article className="inset-group px-4 py-8 text-center">
         <p className="text-[13px] text-neutral-500">正在同步最新报告期…</p>
       </article>
     )
   }
   if (stock.market === 'futures' || !brief || !pack) {
     return (
-      <article className="rounded-2xl border border-black/[0.06] bg-white px-4 py-6">
+      <article className="inset-group px-4 py-6">
         <p className="text-[14px] font-semibold text-neutral-800">这一期财报还没拉到</p>
         <p className="text-[13px] text-neutral-500 mt-2 leading-relaxed">
           东财 datacenter、同花顺三表和 F10 都没有可用主要指标时，不解读。未知不能填成结论。
@@ -265,7 +259,7 @@ function EarningsCard({
     )
   }
   return (
-    <article className="rounded-2xl border border-black/[0.06] bg-white overflow-hidden">
+    <article className="inset-group overflow-hidden">
       <div className="px-4 py-3.5">
         <div className="flex items-start justify-between gap-2 mb-1">
           <p className="text-[16px] font-semibold text-neutral-900 leading-snug">{brief.headline}</p>
@@ -402,7 +396,7 @@ function PlanCell({ label, value, hint }: { label: string; value: string; hint?:
 function SkillMemo({ brief, stock }: { brief: SkillBrief; stock: QuoteItem }) {
   const priced = brief.masters.filter((row) => row.plan)
   return (
-    <article className="rounded-2xl border border-neutral-200/80 bg-white overflow-hidden">
+    <article className="inset-group overflow-hidden">
       <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-neutral-100">
         <div className="flex items-center gap-2 min-w-0">
           <VerdictBadge verdict={brief.verdict} />
@@ -501,7 +495,7 @@ function PlanStrip({ plan, stock }: { plan: SagePlan; stock: QuoteItem }) {
 function ProvenanceNote() {
   const [open, setOpen] = useState(false)
   return (
-    <div className="mt-3 rounded-2xl border border-black/[0.06] bg-white px-4 py-3">
+    <div className="mt-3 inset-group px-4 py-3">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

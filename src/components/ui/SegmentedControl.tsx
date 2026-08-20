@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { lightTap } from '@/lib/nativeInit'
 
 interface SegmentedControlProps<T extends string> {
   options: { value: T; label: string; icon?: React.ReactNode }[]
@@ -31,21 +32,24 @@ export function SegmentedControl<T extends string>({
     <div
       ref={containerRef}
       className={cn(
-        'relative flex p-[3px] rounded-[9px] bg-neutral-200/80',
+        'relative flex p-[3px] rounded-[10px] bg-black/[0.06]',
         fullWidth && 'w-full',
         className,
       )}
     >
       <div
-        className="absolute top-[3px] bottom-[3px] rounded-[6px] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        className="absolute top-[3px] bottom-[3px] rounded-[8px] bg-white shadow-[0_1px_4px_rgba(0,0,0,0.08)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
         style={{ left: indicator.left, width: indicator.width }}
       />
       {options.map((opt) => (
         <button
           key={opt.value}
-          onClick={() => onChange(opt.value)}
+          onClick={() => {
+            void lightTap()
+            onChange(opt.value)
+          }}
           className={cn(
-            'relative z-10 flex-1 px-3 py-1.5 text-[13px] font-medium transition-colors rounded-[6px] inline-flex items-center justify-center gap-1.5',
+            'relative z-10 flex-1 px-3 py-[7px] text-[13px] font-medium transition-colors rounded-[8px] inline-flex items-center justify-center gap-1.5 active:scale-[0.97]',
             !fullWidth && 'flex-none',
             value === opt.value ? 'text-neutral-900' : 'text-neutral-500',
           )}

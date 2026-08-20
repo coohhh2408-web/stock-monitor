@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react'
-import { SegmentedControl } from '@/components/ui/SegmentedControl'
-import { ChangeCapsule, SentimentTag } from '@/components/ui/StocksPrimitives'
+import { SentimentTag } from '@/components/ui/StocksPrimitives'
 import { KlineChart } from '@/components/ui/KlineChart'
 import { QuoteStatsGrid } from './QuoteStatsGrid'
 import { BuffettMungerBrief } from './BuffettMungerBrief'
-import { SkeletonText } from '@/components/ui/Skeleton'
+import { Shelf } from '@/components/ui/Shelf'
 import { cn, formatPrice, getChangeColor } from '@/lib/utils'
+import { lightTap } from '@/lib/nativeInit'
 import { fetchFlashNews, fetchStockNews } from '@/services/newsApi'
 import { fetchChartSeries, fetchQuoteSnapshot } from '@/services/klineApi'
 import { fetchFinancials } from '@/services/financialsApi'
-import type { QuoteItem, AIDiagnosisStub, AnnouncementItem, ChartPeriod, FinancialsPack, KlineBar } from '@/types/market'
-
-type DetailTab = 'ai' | 'news24h' | 'reports'
+import type { QuoteItem, AnnouncementItem, ChartPeriod, FinancialsPack, KlineBar } from '@/types/market'
 
 const PERIODS: { value: ChartPeriod; label: string }[] = [
   { value: 'intraday', label: '分时' },
@@ -24,21 +22,16 @@ const PERIODS: { value: ChartPeriod; label: string }[] = [
 interface StockDetailPanelProps {
   isOpen: boolean
   stock: QuoteItem | null
-  aiDiagnosis: AIDiagnosisStub
   onClose: () => void
-  onGenerateAI: (stock: QuoteItem) => void
   isMobile?: boolean
 }
 
 export function StockDetailPanel({
   isOpen,
   stock,
-  aiDiagnosis,
   onClose,
-  onGenerateAI,
   isMobile = false,
 }: StockDetailPanelProps) {
-  const [tab, setTab] = useState<DetailTab>('ai')
   const [selectedNews, setSelectedNews] = useState<AnnouncementItem | null>(null)
   const [visible, setVisible] = useState(false)
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([])
@@ -53,7 +46,6 @@ export function StockDetailPanel({
   useEffect(() => {
     if (isOpen) {
       setVisible(true)
-      setTab('ai')
       setSelectedNews(null)
       setPeriod('day')
       document.body.style.overflow = 'hidden'
@@ -164,14 +156,8 @@ export function StockDetailPanel({
     : stock
   const newsItems = announcements.filter((a) => a.type === 'news')
   const reportItems = announcements.filter((a) => a.type === 'announcement')
-  const listItems = tab === 'news24h' ? newsItems : tab === 'reports' ? reportItems : []
-
-  const hasAI = aiDiagnosis.status === 'ready' && aiDiagnosis.moatAnalysis
-  const bullets = hasAI ? [
-    aiDiagnosis.anomalySummary ?? '暂无异动信息',
-    aiDiagnosis.moatAnalysis ?? '暂无机构观点',
-    aiDiagnosis.roeDuPont ?? '暂无风险提示',
-  ] : null
+  const changeColor = getChangeColor(display.change)
+  const sign = display.change >= 0 ? '+' : ''
 
   return (
     <div className={cn('apple-modal-backdrop', isMobile && 'mobile-sheet')} onClick={onClose}>
@@ -187,178 +173,129 @@ export function StockDetailPanel({
             <div className="w-9 h-1 rounded-full bg-neutral-300" />
           </div>
         )}
-        <div className={cn('flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain', isMobile ? 'px-5 pb-8 pt-2' : 'px-6 pt-6 pb-6')}>
-        <div className="flex items-center justify-between mb-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <StockIcon name={display.name} />
+        <div className={cn('flex flex-col flex-1 min-h-0 overflow-y-auto overscroll-contain', isMobile ? 'px-4 pb-10 pt-1' : 'px-6 pt-6 pb-6')}>
+        <div className="lockup-card p-5 mb-4">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold text-neutral-900 leading-tight truncate">{display.name}</h2>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className={cn('text-sm font-mono tabular font-medium', getChangeColor(display.change))}>
-                  {formatPrice(display.price)}
-                </span>
-                <ChangeCapsule change={display.change} changePercent={display.changePercent} />
-              </div>
+              <h2 className="text-[22px] font-bold text-neutral-900 leading-tight tracking-tight truncate">{display.name}</h2>
+              <p className="text-[13px] text-neutral-500 mt-0.5 tabular">{display.code}</p>
             </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center transition-colors shrink-0"
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M1 1L9 9M9 1L1 9" stroke="#636366" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="flex gap-1 mb-2 shrink-0">
-          {PERIODS.map((item) => (
             <button
-              key={item.value}
-              onClick={() => setPeriod(item.value)}
-              className={cn(
-                'flex-1 py-1 rounded-md text-[12px] font-medium transition-colors',
-                period === item.value
-                  ? 'bg-neutral-900 text-white'
-                  : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200',
-              )}
+              onClick={() => {
+                void lightTap()
+                onClose()
+              }}
+              aria-label="关闭"
+              className="w-8 h-8 rounded-full bg-[#787880]/16 flex items-center justify-center shrink-0 active:scale-90 transition-transform"
             >
-              {item.label}
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M1 1L9 9M9 1L1 9" stroke="#636366" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
             </button>
-          ))}
+          </div>
+
+          <p className="text-[40px] font-semibold tabular tracking-tight text-neutral-900 leading-none mt-4">
+            {formatPrice(display.price)}
+          </p>
+          <p className={cn('text-[17px] font-medium tabular mt-2', changeColor)}>
+            {sign}{display.change.toFixed(2)}
+            <span className="ml-2">{sign}{display.changePercent.toFixed(2)}%</span>
+          </p>
+
+          <div className="period-tabs mt-5">
+            {PERIODS.map((item) => (
+              <button
+                key={item.value}
+                onClick={() => {
+                  void lightTap()
+                  setPeriod(item.value)
+                }}
+                className={cn(
+                  'flex-1 py-1 text-[13px] font-semibold transition-colors active:opacity-60',
+                  period === item.value ? changeColor : 'text-neutral-400',
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <KlineChart
+            bars={bars}
+            period={period}
+            prevClose={prevClose ?? display.prevClose}
+            loading={chartLoading}
+            className="mt-2"
+          />
         </div>
 
-        <KlineChart
-          bars={bars}
-          period={period}
-          prevClose={prevClose ?? display.prevClose}
-          loading={chartLoading}
-          className="mb-3 shrink-0"
-        />
-
-        <div className="mb-4 shrink-0">
+        <div className="mb-4">
           <QuoteStatsGrid stock={display} financials={financials} />
         </div>
 
-        <SegmentedControl
-          options={[
-            { value: 'ai' as const, label: 'AI 异动速读' },
-            { value: 'news24h' as const, label: '7×24 快讯' },
-            { value: 'reports' as const, label: '公告研报' },
-          ]}
-          value={tab}
-          onChange={setTab}
-          fullWidth
-          className="mb-4 shrink-0"
-        />
+        <h2 className="text-[22px] font-bold tracking-tight text-neutral-900 mb-3 px-0.5">价值清单</h2>
+        <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} />
 
-        <div className="relative min-h-[160px]">
-          {tab === 'ai' && (
-            <div>
-              <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} />
-              {aiDiagnosis.status === 'loading' ? (
-                <div className="ai-glow-card">
-                  <SkeletonText lines={4} />
-                  <p className="text-xs text-neutral-400 mt-3 animate-pulse">AI 分析中…</p>
-                </div>
-              ) : bullets ? (
-                <div className="ai-glow-card">
-                  <p className="text-xs font-medium text-violet-600/80 mb-3 flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-400 to-blue-400 inline-block" />
-                    Apple Intelligence 速读
-                  </p>
-                  <ul className="space-y-3">
-                    {['核心异动催化', '机构观点', '风险提示'].map((label, i) => (
-                      <li key={label} className="flex gap-2.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-1.5 shrink-0" />
-                        <div>
-                          <p className="text-[11px] font-medium text-neutral-400 mb-0.5">{label}</p>
-                          <p className="text-sm text-neutral-700 leading-relaxed">{bullets[i]}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <div className="ai-glow-card text-center py-6">
-                  <p className="text-sm text-neutral-500 mb-3">生成 AI 异动速读分析</p>
-                  <button
-                    onClick={() => onGenerateAI(display)}
-                    className="text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-700 px-4 py-2 rounded-full font-medium transition-colors"
-                  >
-                    开始分析
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+        {newsItems.length > 0 && (
+          <Shelf title="快讯" className="mt-5">
+            {newsItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  void lightTap()
+                  setSelectedNews(item)
+                }}
+                className="shelf-card lockup-card press-float text-left p-5 min-h-[132px]"
+              >
+                <p className="text-[13px] text-neutral-400 tabular">{item.date}</p>
+                <p className="text-[17px] font-semibold text-neutral-900 leading-snug mt-2 line-clamp-3">{item.title}</p>
+              </button>
+            ))}
+          </Shelf>
+        )}
 
-          {(tab === 'news24h' || tab === 'reports') && (
-            <div className={cn('relative', !isMobile && selectedNews && 'flex gap-3')}>
-              <div className={cn(!isMobile && selectedNews && 'w-1/2 opacity-60')}>
-                {listItems.length === 0 ? (
-                  <p className="text-center py-12 text-sm text-neutral-400">暂无内容</p>
-                ) : (
-                  <div className="rounded-xl overflow-hidden border border-black/[0.04]">
-                    {listItems.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => setSelectedNews(item)}
-                        className={cn(
-                          'w-full text-left px-4 py-3 transition-colors border-b border-black/[0.04] last:border-0',
-                          selectedNews?.id === item.id ? 'bg-neutral-100' : 'hover:bg-neutral-50',
-                        )}
-                      >
-                        <p className="text-sm text-neutral-900 leading-snug line-clamp-2">{item.title}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          {item.sentiment && <SentimentTag sentiment={item.sentiment} />}
-                          <span className="text-[11px] text-neutral-400 tabular">{item.date}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+        {reportItems.length > 0 && (
+          <Shelf title="公告" className="mt-2">
+            {reportItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  void lightTap()
+                  setSelectedNews(item)
+                }}
+                className="shelf-card lockup-card press-float text-left p-5 min-h-[132px]"
+              >
+                <p className="text-[13px] text-neutral-400 tabular">{item.date}</p>
+                <p className="text-[17px] font-semibold text-neutral-900 leading-snug mt-2 line-clamp-3">{item.title}</p>
+              </button>
+            ))}
+          </Shelf>
+        )}
 
-              {selectedNews && (
-                <div className={cn(isMobile ? 'mt-3' : 'w-1/2')}>
-                  <div className="bg-neutral-50 rounded-xl p-4 h-full">
-                    {selectedNews.sentiment && <SentimentTag sentiment={selectedNews.sentiment} />}
-                    <h4 className="text-sm font-semibold text-neutral-900 mt-2 leading-snug">{selectedNews.title}</h4>
-                    <p className="text-[11px] text-neutral-400 tabular mt-1">{selectedNews.date}</p>
-                    <p className="text-[13px] text-neutral-600 leading-relaxed mt-3">
-                      {getNewsBody(selectedNews, display)}
-                    </p>
-                    {selectedNews.url && (
-                      <a
-                        href={selectedNews.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-block mt-3 text-[13px] font-medium text-[#007AFF]"
-                      >
-                        查看原文
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {selectedNews && (
+          <div className="lockup-card p-5 mt-3">
+            {selectedNews.sentiment && <SentimentTag sentiment={selectedNews.sentiment} />}
+            <h4 className="text-[17px] font-semibold text-neutral-900 mt-2 leading-snug">{selectedNews.title}</h4>
+            <p className="text-[13px] text-neutral-400 tabular mt-1">{selectedNews.date}</p>
+            <p className="text-[15px] text-neutral-600 leading-relaxed mt-3">
+              {getNewsBody(selectedNews, display)}
+            </p>
+            {selectedNews.url && (
+              <a
+                href={selectedNews.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-block mt-3 text-[15px] font-medium text-[#007AFF]"
+              >
+                查看原文
+              </a>
+            )}
+          </div>
+        )}
         </div>
       </div>
-    </div>
-  )
-}
-
-function StockIcon({ name }: { name: string }) {
-  const hue = name.charCodeAt(0) * 37 % 360
-  return (
-    <div
-      className="w-11 h-11 rounded-2xl flex items-center justify-center text-white text-lg font-bold shrink-0"
-      style={{ background: `linear-gradient(135deg, hsl(${hue},60%,55%), hsl(${hue},50%,45%))` }}
-    >
-      {name.charAt(0)}
     </div>
   )
 }

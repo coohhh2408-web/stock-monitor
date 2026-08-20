@@ -29,6 +29,7 @@ export function PositionList({
 }: PositionListProps) {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedPosition, setSelectedPosition] = useState<PositionItem | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<PositionItem | null>(null)
@@ -45,49 +46,59 @@ export function PositionList({
 
   return (
     <>
-      <div className="flex justify-end mb-3">
-        <button
-          onClick={openCreate}
-          className="text-sm font-medium text-[#007AFF] bg-[#007AFF]/8 hover:bg-[#007AFF]/12 px-3 py-1.5 rounded-full transition-colors"
-        >
-          + 添加持仓
-        </button>
-      </div>
-
       {positions.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-neutral-400">暂无持仓</p>
-          <p className="text-xs text-neutral-400 mt-1">从看板选一只股票，填入股数和成本即可</p>
-          <button onClick={openCreate} className="mt-3 text-sm text-[#007AFF] font-medium">
+        <div className="lockup-card px-4 py-14 text-center">
+          <p className="text-[17px] font-semibold text-neutral-900">暂无持仓</p>
+          <p className="text-[13px] text-neutral-400 mt-1">填入股数和成本后，盈亏会跟行情一起更新</p>
+          <button onClick={openCreate} className="mt-4 text-[15px] text-[#007AFF] font-medium">
             添加第一笔持仓
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {positions.map((pos) => {
-            const isOpen = expandedTimeline === pos.id
-            const count = tTradeRecords.filter((r) => r.positionId === pos.id).length
-            const quote = quotes.find((q) => q.code === pos.code)
+        <div>
+          <h2 className="text-[22px] font-bold tracking-tight text-neutral-900 mb-3 px-0.5">我的持仓</h2>
+          <div className="space-y-3">
+            {positions.map((pos) => {
+              const historyOpen = expandedTimeline === pos.id
+              const count = tTradeRecords.filter((r) => r.positionId === pos.id).length
+              const quote = quotes.find((q) => q.code === pos.code)
 
-            return (
-              <PositionCard
-                key={pos.id}
-                position={pos}
-                quote={quote}
-                historyCount={count}
-                isMobile={isMobile}
-                onEdit={() => openEdit(pos)}
-                onRecordT={() => {
-                  setSelectedPosition(pos)
-                  setModalOpen(true)
-                }}
-                onToggleHistory={() => setExpandedTimeline(isOpen ? null : pos.id)}
-                onDelete={() => onDelete(pos.id)}
-                onReorder={isMobile ? undefined : onReorder}
-                historySlot={<TTradeTimeline isExpanded={isOpen} records={tTradeRecords} positionId={pos.id} />}
-              />
-            )
-          })}
+              return (
+                <div key={pos.id} className="lockup-card overflow-hidden">
+                  <PositionCard
+                    position={pos}
+                    quote={quote}
+                    historyCount={count}
+                    expanded={expandedId === pos.id}
+                    isMobile={isMobile}
+                    onToggle={() => {
+                      setExpandedId((id) => (id === pos.id ? null : pos.id))
+                      if (expandedTimeline === pos.id) setExpandedTimeline(null)
+                    }}
+                    onEdit={() => openEdit(pos)}
+                    onRecordT={() => {
+                      setSelectedPosition(pos)
+                      setModalOpen(true)
+                    }}
+                    onToggleHistory={() => setExpandedTimeline(historyOpen ? null : pos.id)}
+                    historyOpen={historyOpen}
+                    onDelete={() => onDelete(pos.id)}
+                    onReorder={isMobile ? undefined : onReorder}
+                    historySlot={
+                      <TTradeTimeline isExpanded={historyOpen} records={tTradeRecords} positionId={pos.id} />
+                    }
+                  />
+                </div>
+              )
+            })}
+            <button
+              type="button"
+              onClick={openCreate}
+              className="w-full lockup-card px-4 py-3.5 text-left text-[17px] text-[#007AFF] active:scale-[0.98] transition-transform"
+            >
+              添加持仓
+            </button>
+          </div>
         </div>
       )}
 
