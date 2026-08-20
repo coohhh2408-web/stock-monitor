@@ -73,18 +73,24 @@ export function InfoCenter({
     <section className="mt-8">
       <h2 className="text-[22px] font-bold tracking-tight text-neutral-900 mb-3">资讯</h2>
       <div className="grid grid-cols-2 gap-4 items-start">
-        <NewsFeed
-          items={watchlist.slice(0, 10)}
-          loading={loading}
-          empty="暂无自选相关资讯"
-          onTagClick={onTagClick}
-        />
-        <NewsFeed
-          items={flash.slice(0, 12)}
-          loading={loading}
-          empty="快讯暂不可用"
-          onTagClick={onTagClick}
-        />
+        <div>
+          <p className="text-[13px] text-neutral-400 mb-2 px-0.5">自选资讯</p>
+          <NewsFeed
+            items={watchlist.slice(0, 10)}
+            loading={loading}
+            empty="暂无自选相关资讯"
+            onTagClick={onTagClick}
+          />
+        </div>
+        <div>
+          <p className="text-[13px] text-neutral-400 mb-2 px-0.5">7×24 快讯</p>
+          <NewsFeed
+            items={flash.slice(0, 16)}
+            loading={loading}
+            empty="快讯暂不可用"
+            onTagClick={onTagClick}
+          />
+        </div>
       </div>
     </section>
   )
@@ -145,7 +151,7 @@ function NewsFeed({
             <li
               key={item.id}
               className={cn(
-                'flex items-center gap-2 px-4 h-12',
+                'flex items-center gap-2.5 px-4 py-3 min-h-[52px]',
                 i < items.length - 1 && 'border-b border-black/[0.06]',
               )}
             >
@@ -153,7 +159,9 @@ function NewsFeed({
                 className={cn('w-1.5 h-1.5 rounded-full shrink-0', SENTIMENT_DOT[item.sentiment ?? 'neutral'])}
                 aria-hidden
               />
-              <span className="text-[13px] text-neutral-400 tabular w-10 shrink-0">{item.date}</span>
+              <span className="text-[12px] text-neutral-400 tabular w-[4.25rem] shrink-0 leading-tight whitespace-pre-line">
+                {item.date}
+              </span>
               {item.tag && (
                 <button
                   onClick={() => onTagClick(item.tag!)}

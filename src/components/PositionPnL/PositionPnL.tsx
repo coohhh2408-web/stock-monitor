@@ -28,7 +28,7 @@ export function PositionPnL({ isMobile = false }: { isMobile?: boolean }) {
         </header>
       )}
 
-      <SummaryCards summary={summary} />
+      <SummaryCards summary={summary} isMobile={isMobile} />
       <PositionList
         quotes={quotes}
         positions={positions}

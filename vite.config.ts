@@ -27,6 +27,12 @@ export default defineConfig({
         target: 'https://newsapi.eastmoney.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/em-kuaixun/, ''),
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('referer', 'https://finance.eastmoney.com/')
+            proxyReq.setHeader('origin', 'https://finance.eastmoney.com')
+          })
+        },
       },
       '/em-f10': {
         target: 'https://emweb.securities.eastmoney.com',
@@ -37,6 +43,16 @@ export default defineConfig({
         target: 'https://zhibo.sina.com.cn',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/sina-zhibo/, ''),
+      },
+      '/wscn': {
+        target: 'https://api.wallstreetcn.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/wscn/, ''),
+      },
+      '/wscn-one': {
+        target: 'https://api-one-wscn.awtmt.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/wscn-one/, ''),
       },
       '/cls': {
         target: 'https://www.cls.cn',

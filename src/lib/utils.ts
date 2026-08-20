@@ -83,7 +83,7 @@ export function getChangeColor(change: number): string {
 export function getChangeBgColor(change: number): string {
   if (change > 0) return 'bg-apple-red/10 text-apple-red'
   if (change < 0) return 'bg-apple-green/10 text-apple-green'
-  return 'bg-apple-gray-100 text-apple-gray-600'
+  return 'bg-black/[0.06] text-neutral-500'
 }
 
 export function calculateTTrade(

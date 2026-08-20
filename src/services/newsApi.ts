@@ -74,9 +74,9 @@ function mapKuaixun(rows: Array<Record<string, string>>, quotes: QuoteItem[]): A
 
 async function fetchKuaixunRaw(): Promise<Array<Record<string, string>>> {
   const path = '/kuaixun/v1/getlist_102_ajaxResult_50_1_.html'
-  const urls = usesDevProxy()
-    ? [`/em-kuaixun${path}`, `https://newsapi.eastmoney.com${path}`]
-    : [`https://newsapi.eastmoney.com${path}`]
+  const urls: string[] = []
+  if (usesDevProxy()) urls.push(`/em-kuaixun${path}`)
+  if (usesNativeHttp()) urls.push(`https://newsapi.eastmoney.com${path}`)
 
   for (const url of urls) {
     try {
@@ -100,9 +100,10 @@ async function fetchKuaixunRaw(): Promise<Array<Record<string, string>>> {
 
 async function fetchSinaFlash(): Promise<AnnouncementItem[]> {
   const path = '/api/zhibo/feed?page=1&page_size=40&zhibo_id=152&tag_id=0&dire=f'
-  const urls = usesDevProxy()
-    ? [`/sina-zhibo${path}`, `https://zhibo.sina.com.cn${path}`]
-    : [`https://zhibo.sina.com.cn${path}`]
+  const urls: string[] = []
+  if (usesDevProxy()) urls.push(`/sina-zhibo${path}`)
+  if (usesNativeHttp()) urls.push(`https://zhibo.sina.com.cn${path}`)
+  if (urls.length === 0) return []
 
   for (const url of urls) {
     try {
@@ -144,10 +145,15 @@ async function fetchSinaFlash(): Promise<AnnouncementItem[]> {
 
 /** 华尔街见闻 7×24，接口带 CORS，隧道和静态部署都能直接拉。 */
 async function fetchWallstreetcnFlash(quotes: QuoteItem[]): Promise<AnnouncementItem[]> {
-  const urls = [
-    'https://api.wallstreetcn.com/apiv1/content/lives?channel=global-channel&client=pc&limit=40',
-    'https://api-one-wscn.awtmt.com/apiv1/content/lives?channel=global-channel&limit=40',
-  ]
+  const urls = usesDevProxy()
+    ? [
+        '/wscn/apiv1/content/lives?channel=global-channel&client=pc&limit=40',
+        '/wscn-one/apiv1/content/lives?channel=global-channel&limit=40',
+      ]
+    : [
+        'https://api.wallstreetcn.com/apiv1/content/lives?channel=global-channel&client=pc&limit=40',
+        'https://api-one-wscn.awtmt.com/apiv1/content/lives?channel=global-channel&limit=40',
+      ]
   for (const url of urls) {
     try {
       const payload = await readJson<{
@@ -239,22 +245,38 @@ async function fetchClsTelegraph(quotes: QuoteItem[]): Promise<AnnouncementItem[
   return []
 }
 
+async function firstNonEmpty(jobs: Array<Promise<AnnouncementItem[]>>): Promise<AnnouncementItem[]> {
+  return new Promise((resolve) => {
+    let remaining = jobs.length
+    if (remaining === 0) {
+      resolve([])
+      return
+    }
+    for (const job of jobs) {
+      job
+        .then((items) => {
+          if (items.length > 0) {
+            resolve(items)
+            return
+          }
+          remaining -= 1
+          if (remaining === 0) resolve([])
+        })
+        .catch(() => {
+          remaining -= 1
+          if (remaining === 0) resolve([])
+        })
+    }
+  })
+}
+
 export async function fetchFlashNews(quotes: QuoteItem[] = []): Promise<AnnouncementItem[]> {
-  try {
-    const rows = await fetchKuaixunRaw()
-    const mapped = mapKuaixun(rows, quotes)
-    if (mapped.length > 0) return mapped
-  } catch {
-    /* next source */
-  }
-
-  const cls = await fetchClsTelegraph(quotes)
-  if (cls.length > 0) return cls
-
-  const wscn = await fetchWallstreetcnFlash(quotes)
-  if (wscn.length > 0) return wscn
-
-  return fetchSinaFlash()
+  return firstNonEmpty([
+    fetchKuaixunRaw().then((rows) => mapKuaixun(rows, quotes)),
+    fetchClsTelegraph(quotes),
+    fetchWallstreetcnFlash(quotes),
+    fetchSinaFlash(),
+  ])
 }
 
 interface F10Payload {
@@ -326,7 +348,7 @@ export async function fetchWatchlistNews(quotes: QuoteItem[]): Promise<Announcem
   ).slice(0, 4)
 
   const batches = await Promise.all(targets.map((q) => fetchStockNews(q).catch(() => [] as AnnouncementItem[])))
-  const fromF10 = batches.flat().filter((item) => item.type === 'news' && item.title).slice(0, 8)
+  const fromF10 = batches.flat().filter((item) => item.title).slice(0, 12)
   if (fromF10.length > 0) return fromF10
 
   const flash = await fetchFlashNews(quotes)
