@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { PositionCard } from './PositionCard'
 import { TTradeModal } from './TTradeModal'
 import { TTradeTimeline } from './TTradeTimeline'
-import { PositionEditor, type PositionDraft } from './PositionEditor'
 import type { PositionItem, TTradeRecord, TTradeFormInput, TTradeCalculationResult } from '@/types/position'
 import type { QuoteItem } from '@/types/market'
 
@@ -12,7 +11,8 @@ interface PositionListProps {
   tTradeRecords: TTradeRecord[]
   isMobile?: boolean
   onTTradeSubmit: (positionId: string, form: TTradeFormInput, result: TTradeCalculationResult) => void
-  onUpsert: (draft: PositionDraft & { id?: string }) => boolean
+  onCreate: () => void
+  onEdit: (position: PositionItem) => void
   onDelete: (positionId: string) => void
   onReorder?: (fromId: string, toId: string) => void
 }
@@ -23,7 +23,8 @@ export function PositionList({
   tTradeRecords,
   isMobile = false,
   onTTradeSubmit,
-  onUpsert,
+  onCreate,
+  onEdit,
   onDelete,
   onReorder,
 }: PositionListProps) {
@@ -31,18 +32,6 @@ export function PositionList({
   const [selectedPosition, setSelectedPosition] = useState<PositionItem | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null)
-  const [editorOpen, setEditorOpen] = useState(false)
-  const [editing, setEditing] = useState<PositionItem | null>(null)
-
-  const openCreate = () => {
-    setEditing(null)
-    setEditorOpen(true)
-  }
-
-  const openEdit = (pos: PositionItem) => {
-    setEditing(pos)
-    setEditorOpen(true)
-  }
 
   return (
     <>
@@ -50,13 +39,20 @@ export function PositionList({
         <div className="lockup-card px-4 py-14 text-center">
           <p className="text-[17px] font-semibold text-neutral-900">暂无持仓</p>
           <p className="text-[13px] text-neutral-400 mt-1">填入股数和成本后，盈亏会跟行情一起更新</p>
-          <button onClick={openCreate} className="mt-4 text-[15px] text-[#007AFF] font-medium">
+          <button type="button" onClick={onCreate} className="mt-4 text-[15px] text-[#007AFF] font-medium">
             添加第一笔持仓
           </button>
         </div>
       ) : (
         <div>
-          <h2 className="text-[22px] font-bold tracking-tight text-neutral-900 mb-3 px-0.5">我的持仓</h2>
+          <div className="flex items-baseline justify-between gap-3 mb-3 px-0.5">
+            <h2 className="text-[22px] font-bold tracking-tight text-neutral-900">我的持仓</h2>
+            {!isMobile && (
+              <button type="button" onClick={onCreate} className="text-[15px] font-medium text-[#007AFF]">
+                添加
+              </button>
+            )}
+          </div>
           <div className="space-y-3">
             {positions.map((pos) => {
               const historyOpen = expandedTimeline === pos.id
@@ -75,7 +71,7 @@ export function PositionList({
                       setExpandedId((id) => (id === pos.id ? null : pos.id))
                       if (expandedTimeline === pos.id) setExpandedTimeline(null)
                     }}
-                    onEdit={() => openEdit(pos)}
+                    onEdit={() => onEdit(pos)}
                     onRecordT={() => {
                       setSelectedPosition(pos)
                       setModalOpen(true)
@@ -93,7 +89,7 @@ export function PositionList({
             })}
             <button
               type="button"
-              onClick={openCreate}
+              onClick={onCreate}
               className="w-full lockup-card px-4 py-3.5 text-left text-[17px] text-[#007AFF] active:scale-[0.98] transition-transform"
             >
               添加持仓
@@ -107,15 +103,6 @@ export function PositionList({
         position={selectedPosition}
         onClose={() => setModalOpen(false)}
         onSubmit={(form, result) => selectedPosition && onTTradeSubmit(selectedPosition.id, form, result)}
-      />
-
-      <PositionEditor
-        isOpen={editorOpen}
-        quotes={quotes}
-        existingCodes={positions.map((p) => p.code)}
-        editing={editing}
-        onClose={() => setEditorOpen(false)}
-        onSubmit={(draft) => onUpsert({ ...draft, id: editing?.id })}
       />
     </>
   )

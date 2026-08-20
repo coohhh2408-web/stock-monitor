@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { SummaryCards } from './SummaryCards'
 import { PositionList } from './PositionList'
+import { PositionEditor, type PositionDraft } from './PositionEditor'
 import { useAppStore } from '@/store/AppStore'
+import { lightTap } from '@/lib/nativeInit'
+import type { PositionItem } from '@/types/position'
 
 export function PositionPnL({ isMobile = false }: { isMobile?: boolean }) {
   const {
@@ -13,13 +17,37 @@ export function PositionPnL({ isMobile = false }: { isMobile?: boolean }) {
     deletePosition,
     reorderPositions,
   } = useAppStore()
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editing, setEditing] = useState<PositionItem | null>(null)
+
+  const openCreate = () => {
+    void lightTap()
+    setEditing(null)
+    setEditorOpen(true)
+  }
+
+  const openEdit = (pos: PositionItem) => {
+    setEditing(pos)
+    setEditorOpen(true)
+  }
+
+  const handleSubmit = (draft: PositionDraft) => upsertPosition({ ...draft, id: editing?.id })
 
   return (
     <div>
       {isMobile ? (
-        <header className="mb-6">
-          <h1 className="text-[34px] font-bold tracking-tight text-neutral-900 leading-none">持仓</h1>
-          <p className="text-[15px] text-neutral-500 mt-2">市值和盈亏跟行情一起更新</p>
+        <header className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[34px] font-bold tracking-tight text-neutral-900 leading-none">持仓</h1>
+            <p className="text-[15px] text-neutral-500 mt-2">市值和盈亏跟行情一起更新</p>
+          </div>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="shrink-0 mt-1 text-[17px] font-medium text-[#007AFF] active:opacity-60"
+          >
+            添加
+          </button>
         </header>
       ) : (
         <header className="mb-4 flex items-end justify-between gap-3">
@@ -35,9 +63,18 @@ export function PositionPnL({ isMobile = false }: { isMobile?: boolean }) {
         tTradeRecords={tTrades}
         isMobile={isMobile}
         onTTradeSubmit={(id, form, result) => recordTTrade(id, form, result)}
-        onUpsert={(draft) => upsertPosition(draft)}
+        onCreate={openCreate}
+        onEdit={openEdit}
         onDelete={deletePosition}
         onReorder={reorderPositions}
+      />
+      <PositionEditor
+        isOpen={editorOpen}
+        quotes={quotes}
+        existingCodes={positions.map((p) => p.code)}
+        editing={editing}
+        onClose={() => setEditorOpen(false)}
+        onSubmit={handleSubmit}
       />
     </div>
   )
