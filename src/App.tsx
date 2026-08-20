@@ -5,6 +5,7 @@ import { parseShareRoute, type ShareRoute } from '@/services/shareService'
 import { TabBar } from '@/components/layout/TabBar'
 import { DesktopTabBar } from '@/components/layout/DesktopTabBar'
 import { MarketDashboard } from '@/components/MarketDashboard/MarketDashboard'
+import { StockScreener } from '@/components/StockScreener/StockScreener'
 import { PositionPnL } from '@/components/PositionPnL/PositionPnL'
 import { AlertManager } from '@/components/AlertManager/AlertManager'
 import { useAppStore } from '@/store/AppStore'
@@ -50,7 +51,7 @@ function AppShell() {
   const [activeTab, setActiveTab] = useState<AppTab>(() => {
     if (typeof window === 'undefined') return 'market'
     const h = window.location.hash.replace(/^#\/?/, '')
-    return h === 'alert' || h === 'position' || h === 'market' ? h : 'market'
+    return h === 'alert' || h === 'position' || h === 'market' || h === 'screener' ? h : 'market'
   })
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { settings, setSettings, resetAllData, refreshQuotes, quotes, quoteFeed, lastRefreshedAt, cloudSync, setCloudSyncConfig, generateSyncRoom, syncNow } = useAppStore()
@@ -64,6 +65,7 @@ function AppShell() {
 
   const tabTitles: Record<AppTab, string> = {
     market: '行情',
+    screener: '选股',
     position: '持仓',
     alert: '提醒',
   }
@@ -135,6 +137,7 @@ function AppShell() {
         {isMobile ? (
           <>
             {activeTab === 'market' && <MarketDashboard isMobile />}
+            {activeTab === 'screener' && <StockScreener isMobile />}
             {activeTab === 'position' && <PositionPnL isMobile />}
             {activeTab === 'alert' && <AlertManager isMobile />}
           </>
@@ -145,6 +148,7 @@ function AppShell() {
               onChange={selectTab}
             />
             {activeTab === 'market' && <MarketDashboard />}
+            {activeTab === 'screener' && <StockScreener />}
             {activeTab === 'position' && <PositionPnL />}
             {activeTab === 'alert' && <AlertManager />}
           </div>

@@ -20,6 +20,16 @@ const TABS: {
     ),
   },
   {
+    value: 'screener',
+    label: '价值选股',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="4.2" stroke="#007AFF" strokeWidth="1.5" />
+        <path d="M10.2 10.2L13.2 13.2" stroke="#007AFF" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     value: 'position',
     label: '持仓盈亏与做T',
     icon: (

@@ -1,4 +1,4 @@
-export type AppTab = 'market' | 'position' | 'alert'
+export type AppTab = 'market' | 'screener' | 'position' | 'alert'
 
 export interface FeatureStubMeta {
   id: string
@@ -18,6 +18,12 @@ export const FEATURE_STUBS = {
     id: 'market-filter',
     label: '行情筛选与自选分组',
     description: '板块 Filter 胶囊 + 搜索筛选',
+    status: 'ready',
+  },
+  stockScreener: {
+    id: 'stock-screener',
+    label: '价值选股',
+    description: '按习惯市盈率带筛大市值样本，一键加入看板',
     status: 'ready',
   },
   tTradeModal: {
