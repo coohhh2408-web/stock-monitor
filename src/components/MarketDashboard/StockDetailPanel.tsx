@@ -4,6 +4,7 @@ import { ChangeCapsule, SentimentTag } from '@/components/ui/StocksPrimitives'
 import { KlineChart } from '@/components/ui/KlineChart'
 import { QuoteStatsGrid } from './QuoteStatsGrid'
 import { BuffettMungerBrief } from './BuffettMungerBrief'
+import { PricePlanStrip } from './PricePlanStrip'
 import { SkeletonText } from '@/components/ui/Skeleton'
 import { cn, formatPrice, getChangeColor } from '@/lib/utils'
 import { fetchFlashNews, fetchStockNews } from '@/services/newsApi'
@@ -241,6 +242,10 @@ export function StockDetailPanel({
 
         <div className="mb-4 shrink-0">
           <QuoteStatsGrid stock={display} financials={financials} />
+        </div>
+
+        <div className="mb-4 shrink-0">
+          <PricePlanStrip quote={display} variant="panel" />
         </div>
 
         <SegmentedControl

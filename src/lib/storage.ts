@@ -39,4 +39,5 @@ export const STORAGE_KEYS = {
   aiCache: 'ai-diagnosis-cache',
   cloudSync: 'cloud-sync',
   notifiedAlerts: 'notified-alerts',
+  pricePlans: 'price-plans',
 } as const

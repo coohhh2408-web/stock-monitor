@@ -67,7 +67,9 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
       {!isMobile && (
         <header className="mb-4 flex items-end justify-between gap-3">
           <h2 className="text-[17px] font-semibold text-neutral-800 tracking-tight">实时行情看板</h2>
-          <p className="text-[11px] text-neutral-400 shrink-0">拖拽卡片左侧 ≡ 可任意位置排序</p>
+          <p className="text-[11px] text-neutral-400 shrink-0 text-right leading-relaxed">
+            拖拽卡片左侧 ≡ 可排序 · 卡片可写止盈止损，到价提醒，不是下单
+          </p>
         </header>
       )}
 
