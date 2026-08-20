@@ -15,7 +15,7 @@ import {
   MOCK_T_TRADES,
   MOCK_ALERTS,
 } from '@/data/mockData'
-import { loadFromStorage, saveToStorage, removeFromStorage, STORAGE_KEYS } from '@/lib/storage'
+import { loadFromStorage, loadOptionalFromStorage, saveToStorage, removeFromStorage, STORAGE_KEYS } from '@/lib/storage'
 import { APP_RESUME_EVENT } from '@/lib/nativeInit'
 import { tickQuote, syncPositionPrice, computePortfolioSummary, generateAIDiagnosis, generateSparkline, buildPosition } from '@/services/marketService'
 import { fetchLiveQuote, fetchLiveQuotes } from '@/services/quoteApi'
@@ -37,6 +37,8 @@ import {
 } from '@/services/notificationService'
 import { catalogEntryToQuote } from '@/data/stockCatalog'
 import { alertTriggerMessage, isAlertTriggered, normalizeAlertRule } from '@/lib/alertUtils'
+import { reconcileAlertNotifications, sameAlertIdSet } from '@/lib/alertNotify'
+import { coverIdentity } from '@/lib/stealthCover'
 import type { QuoteItem, AIDiagnosisStub, SparklineDataPoint, StockCatalogEntry } from '@/types/market'
 import type {
   PositionItem,
@@ -45,7 +47,7 @@ import type {
   TTradeCalculationResult,
   PortfolioSummary,
 } from '@/types/position'
-import type { AlertRule, BarkSettings, DesktopAlertSettings, ShareViewStub } from '@/types/alert'
+import type { AlertRule, BarkSettings, DesktopAlertSettings, IncomingCallPayload, ShareViewStub } from '@/types/alert'
 import { DEFAULT_APP_SETTINGS, type AppSettings } from '@/types/settings'
 import type { CloudSyncState, SyncPayload } from '@/types/cloudSync'
 
@@ -365,7 +367,12 @@ export function AppProvider({
 }) {
   const [state, dispatch] = useReducer(reducer, undefined, loadInitialState)
   const [cloudSync, setCloudSyncState] = useState<CloudSyncState>(loadCloudSyncConfig)
-  const notifiedAlerts = useRef<Set<string>>(new Set())
+  const notifiedAlerts = useRef<Set<string>>(
+    new Set(loadOptionalFromStorage<string[]>(STORAGE_KEYS.notifiedAlerts) ?? []),
+  )
+  const notifyNeedsBootstrap = useRef(
+    loadOptionalFromStorage<string[]>(STORAGE_KEYS.notifiedAlerts) === undefined,
+  )
   const toast = showToast ?? (() => {})
   const quotesRef = useRef(state.quotes)
   quotesRef.current = state.quotes
@@ -442,25 +449,47 @@ export function AppProvider({
   }, [state.settings.liveQuotesEnabled, pullLiveQuotes])
 
   useEffect(() => {
-    const activeAlerts = state.alerts.filter((a) => a.isActive)
-    if (activeAlerts.length === 0) return
+    const triggeredIds: string[] = []
+    const triggeredById = new Map<string, AlertRule>()
 
-    for (const alert of activeAlerts) {
+    for (const alert of state.alerts) {
+      if (!alert.isActive) continue
       const quote = state.quotes.find((q) => q.code === alert.stockCode)
-      if (!quote) continue
+      if (!quote || !isAlertTriggered(alert, quote)) continue
+      triggeredIds.push(alert.id)
+      triggeredById.set(alert.id, alert)
+    }
 
-      if (!isAlertTriggered(alert, quote)) {
-        notifiedAlerts.current.delete(alert.id)
-        continue
-      }
+    if (notifyNeedsBootstrap.current) {
+      notifyNeedsBootstrap.current = false
+      notifiedAlerts.current = new Set(triggeredIds)
+      saveToStorage(STORAGE_KEYS.notifiedAlerts, triggeredIds)
+      return
+    }
 
-      if (notifiedAlerts.current.has(alert.id)) continue
-      notifiedAlerts.current.add(alert.id)
+    const { notified, fireIds } = reconcileAlertNotifications(notifiedAlerts.current, triggeredIds)
+    if (!sameAlertIdSet(notifiedAlerts.current, notified)) {
+      notifiedAlerts.current = notified
+      saveToStorage(STORAGE_KEYS.notifiedAlerts, [...notified])
+    }
+
+    for (const id of fireIds) {
+      const alert = triggeredById.get(id)
+      const quote = alert ? state.quotes.find((q) => q.code === alert.stockCode) : undefined
+      if (!alert || !quote) continue
 
       const title = `${alert.stockName} 提醒触发`
       const body = alertTriggerMessage(alert, quote)
+      const cover = coverIdentity(alert.stockCode)
+      const incoming: IncomingCallPayload = {
+        id: alert.id,
+        coverName: cover.name,
+        coverLine: cover.line,
+        title,
+        body,
+      }
 
-      deliverDesktopAlert(state.desktop, title, body)
+      deliverDesktopAlert(state.desktop, title, body, incoming)
 
       if (state.bark.enabled && state.bark.key.trim()) {
         void sendBarkPush(state.bark, title, body)
@@ -853,6 +882,8 @@ export function AppProvider({
     createShareLink,
     resetAllData: () => {
       Object.values(STORAGE_KEYS).forEach((key) => removeFromStorage(key))
+      notifiedAlerts.current = new Set()
+      notifyNeedsBootstrap.current = true
       dispatch({ type: 'RESET_ALL' })
       toast('已重置全部数据', 'info')
     },

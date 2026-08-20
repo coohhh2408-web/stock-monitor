@@ -1,6 +1,7 @@
 import { Toggle } from '@/components/ui/Toggle'
 import { useToast } from '@/components/ui/Toast'
 import { ShareViewButton } from './ShareViewButton'
+import { previewIncomingCall } from '@/services/notificationService'
 import type { BarkSettings, DesktopAlertSettings, BarkLevel, ShareViewStub } from '@/types/alert'
 
 interface NotificationPanelProps {
@@ -102,15 +103,28 @@ export function NotificationPanel({
           <div className="inset-group">
             {([
               ['systemBanner', '横幅通知'],
-              ['alarmSound', '警报声'],
+              ['alarmSound', '提示音'],
               ['ttsVoice', '语音播报'],
-              ['popupAlert', '弹窗强提醒'],
+              ['popupAlert', '来电式提醒'],
             ] as const).map(([key, label]) => (
               <div key={key} className={rowClass}>
                 <span className="text-sm text-neutral-900">{label}</span>
                 <Toggle checked={desktop[key]} onChange={(v) => onDesktopChange({ [key]: v })} label="" />
               </div>
             ))}
+          </div>
+          <p className="px-4 pt-2 text-[11px] leading-relaxed text-neutral-400">
+            提示音是压低的系统三声音。来电画面先显示掩护联系人，接听后才看到股价，避免工位上被看见。
+          </p>
+          <div className="inset-group mt-2">
+            <div className="inset-row">
+              <button
+                onClick={() => previewIncomingCall()}
+                className="text-sm text-[#007AFF] w-full text-left"
+              >
+                预览来电提醒
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -174,26 +188,23 @@ export function NotificationPanel({
         </p>
         {([
           ['systemBanner', '横幅通知'],
-          ['alarmSound', '警报声'],
+          ['alarmSound', '提示音'],
           ['ttsVoice', '语音播报'],
-          ['popupAlert', '弹窗强提醒'],
+          ['popupAlert', '来电式提醒'],
         ] as const).map(([key, label]) => (
           <div key={key} className={rowClass}>
             <span className="text-sm text-neutral-900">{label}</span>
             <Toggle checked={desktop[key]} onChange={(v) => onDesktopChange({ [key]: v })} label="" />
           </div>
         ))}
+        <p className="text-[11px] leading-relaxed text-neutral-400 px-0.5 py-2">
+          提示音是压低的系统三声音。来电画面先显示掩护联系人，接听后才看到股价。
+        </p>
         <button
-          onClick={() => {
-            if ('Notification' in window && Notification.permission !== 'granted') {
-              void Notification.requestPermission()
-            } else {
-              new Notification('Stock Monitor', { body: '电脑端提醒测试' })
-            }
-          }}
-          className="w-full py-2 mt-2 rounded-xl bg-[#F2F3F5] text-neutral-600 text-sm font-medium hover:bg-neutral-200 transition-colors"
+          onClick={() => previewIncomingCall()}
+          className="w-full py-2 mt-1 rounded-xl bg-[#F2F3F5] text-neutral-600 text-sm font-medium hover:bg-neutral-200 transition-colors"
         >
-          测试电脑提醒
+          预览来电提醒
         </button>
       </div>
 

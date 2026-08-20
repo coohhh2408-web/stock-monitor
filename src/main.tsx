@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { initNativeApp } from '@/lib/nativeInit'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
 import { AppProvider } from '@/store/AppStore'
+import { IncomingCallHost } from '@/components/AlertManager/IncomingCallAlert'
 import './index.css'
 import App from './App'
 
@@ -13,6 +14,7 @@ function AppRoot() {
   return (
     <AppProvider showToast={showToast}>
       <App />
+      <IncomingCallHost />
     </AppProvider>
   )
 }

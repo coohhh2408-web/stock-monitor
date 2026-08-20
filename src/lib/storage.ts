@@ -1,13 +1,18 @@
 const PREFIX = 'stock-monitor:'
 
-export function loadFromStorage<T>(key: string, fallback: T): T {
+export function loadOptionalFromStorage<T>(key: string): T | undefined {
   try {
     const raw = localStorage.getItem(PREFIX + key)
-    if (!raw) return fallback
+    if (raw === null || raw === '') return undefined
     return JSON.parse(raw) as T
   } catch {
-    return fallback
+    return undefined
   }
+}
+
+export function loadFromStorage<T>(key: string, fallback: T): T {
+  const value = loadOptionalFromStorage<T>(key)
+  return value === undefined ? fallback : value
 }
 
 export function saveToStorage<T>(key: string, value: T): void {
@@ -33,4 +38,5 @@ export const STORAGE_KEYS = {
   shareViews: 'share-views',
   aiCache: 'ai-diagnosis-cache',
   cloudSync: 'cloud-sync',
+  notifiedAlerts: 'notified-alerts',
 } as const
