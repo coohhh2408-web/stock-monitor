@@ -1,6 +1,6 @@
 let callbackSeq = 0
 
-export function jsonp<T>(url: string, timeoutMs = 8000): Promise<T> {
+export function jsonp<T>(url: string, timeoutMs = 8000, callbackParam = 'callback'): Promise<T> {
   return new Promise((resolve, reject) => {
     const name = `__sm_cb_${Date.now()}_${callbackSeq++}`
     const script = document.createElement('script')
@@ -21,7 +21,7 @@ export function jsonp<T>(url: string, timeoutMs = 8000): Promise<T> {
     ;(window as unknown as Record<string, unknown>)[name] = (payload: T) => cleanup(undefined, payload)
 
     const joiner = url.includes('?') ? '&' : '?'
-    script.src = `${url}${joiner}callback=${name}&_=${Date.now()}`
+    script.src = `${url}${joiner}${callbackParam}=${name}&_=${Date.now()}`
     script.async = true
     script.onerror = () => cleanup(new Error('行情接口不可用'))
     document.head.appendChild(script)

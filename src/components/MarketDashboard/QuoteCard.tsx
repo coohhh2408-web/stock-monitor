@@ -1,6 +1,5 @@
 import { MiniSparkline } from '@/components/ui/MiniSparkline'
 import { ChangeCapsule, MarketTag } from '@/components/ui/StocksPrimitives'
-import { PricePlanStrip } from './PricePlanStrip'
 import { cn, formatListedCode, formatPrice, formatQuotePrice } from '@/lib/utils'
 import { lightTap } from '@/lib/nativeInit'
 import type { QuoteItem, SparklineDataPoint } from '@/types/market'
@@ -67,7 +66,6 @@ export function QuoteCard({
         <p className="text-[32px] font-semibold tracking-tight font-mono tabular text-neutral-900 leading-none">
           {formatQuotePrice(quote.price, quote.market)}
         </p>
-        <PricePlanStrip quote={quote} variant="card" />
       </article>
     )
   }
@@ -167,7 +165,6 @@ export function QuoteCard({
             </button>
           </div>
         </div>
-        <PricePlanStrip quote={quote} variant="card" />
       </article>
     )
   }
@@ -195,7 +192,6 @@ export function QuoteCard({
           </div>
         </div>
       </div>
-      <PricePlanStrip quote={quote} variant="list" />
     </article>
   )
 }

@@ -1,5 +1,6 @@
 import { jsonp, loadScript } from '@/lib/jsonp'
 import { catalogEntryToQuote, searchStockCatalog } from '@/data/stockCatalog'
+import { parseSinaSuggest, parseTencentHint } from '@/lib/stockSearch'
 import { inferMarket, toEastMoneySecid, toTencentSymbol } from '@/services/symbolMap'
 import type { QuoteItem, SparklineDataPoint, StockCatalogEntry } from '@/types/market'
 
@@ -221,7 +222,7 @@ function mapSuggestMarket(typeName?: string, mktNum?: string): QuoteItem['market
 
 async function searchEastMoney(query: string): Promise<StockCatalogEntry[]> {
   const url = `https://searchapi.eastmoney.com/api/suggest/get?input=${encodeURIComponent(query)}&type=14&token=D43BF722C8E33BDC906FB84D85E326E8`
-  const payload = await jsonp<EastMoneySuggest>(url)
+  const payload = await jsonp<EastMoneySuggest>(url, 8000, 'cb')
   const rows = payload.QuotationCodeTable?.Data ?? []
   return rows.slice(0, 8).map((row) => {
     const code = String(row.Code ?? '')
@@ -259,7 +260,7 @@ export async function searchLiveStocks(
   if (!q) return []
 
   const local = searchStockCatalog(q, existingCodes, limit)
-  const remoteChunks = await Promise.allSettled([searchSina(q), searchEastMoney(q)])
+  const remoteChunks = await Promise.allSettled([searchTencent(q), searchSina(q), searchEastMoney(q)])
   const remote = remoteChunks.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
 
   const typed = entryFromTypedQuery(q)
@@ -276,6 +277,17 @@ export async function searchLiveStocks(
   return merged
 }
 
+async function searchTencent(query: string): Promise<StockCatalogEntry[]> {
+  await loadScript(`https://smartbox.gtimg.cn/s3/?v=2&q=${encodeURIComponent(query)}&t=all`)
+  const raw = String((window as unknown as { v_hint?: string }).v_hint ?? '')
+  try {
+    delete (window as unknown as { v_hint?: string }).v_hint
+  } catch {
+    ;(window as unknown as { v_hint?: string }).v_hint = undefined
+  }
+  return parseTencentHint(raw)
+}
+
 async function searchSina(query: string): Promise<StockCatalogEntry[]> {
   const name = `__sm_suggest_${Date.now()}`
   await loadScript(
@@ -288,28 +300,7 @@ async function searchSina(query: string): Promise<StockCatalogEntry[]> {
   } catch {
     /* ignore */
   }
-  if (!raw) return []
-
-  return raw
-    .split(';')
-    .map((chunk) => chunk.split(','))
-    .filter((parts) => parts.length >= 4)
-    .slice(0, 8)
-    .map((parts) => {
-      const type = parts[1]
-      const rawCode = (parts[3] || parts[2] || '').replace(/^(sh|sz|bj|hk|gb_)/i, '')
-      const displayName = parts[4] || parts[0] || rawCode
-      const market: QuoteItem['market'] =
-        type === '31' ? 'us-stock' : type === '21' || type === '22' ? 'hk-stock' : 'a-share'
-      const code =
-        market === 'us-stock'
-          ? rawCode.toUpperCase()
-          : market === 'hk-stock'
-            ? rawCode.replace(/\D/g, '').padStart(5, '0')
-            : rawCode.replace(/\D/g, '') || rawCode
-      return { name: displayName, code, market, basePrice: 0 }
-    })
-    .filter((row) => row.code && row.name)
+  return parseSinaSuggest(raw)
 }
 
 export async function fetchIntradaySparkline(quote: QuoteItem): Promise<SparklineDataPoint[] | null> {
