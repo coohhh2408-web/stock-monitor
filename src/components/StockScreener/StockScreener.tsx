@@ -113,7 +113,7 @@ export function StockScreener({ isMobile = false }: { isMobile?: boolean }) {
           <p className="text-[13px] text-neutral-600 mb-2">
             {universe.length} 只样本里，{hits.length} 只符合「{presetMeta.label}」
           </p>
-          <ul className="space-y-3">
+          <ul className="space-y-3 bg-white">
             {hits.map((hit) => (
               <ScreenerRow
                 key={`${hit.quote.market}:${hit.quote.code}`}
