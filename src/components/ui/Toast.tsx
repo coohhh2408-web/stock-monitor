@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { newId } from '@/lib/id'
 
 type ToastKind = 'success' | 'error' | 'info'
 
@@ -19,7 +20,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
 
   const showToast = useCallback((message: string, kind: ToastKind = 'info') => {
-    const id = crypto.randomUUID()
+    const id = newId()
     setToasts((prev) => [...prev, { id, message, kind }])
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))

@@ -1,6 +1,7 @@
 import { canBypassBrowserCors, usesDevProxy, usesNativeHttp } from '@/lib/devProxy'
 import { loadScript } from '@/lib/jsonp'
 import { md5OfSha1Hex } from '@/lib/md5'
+import { newId } from '@/lib/id'
 import { formatListedCode } from '@/lib/utils'
 import type { AnnouncementItem, QuoteItem, SentimentTag } from '@/types/market'
 
@@ -307,7 +308,7 @@ export async function fetchStockNews(stock: QuoteItem): Promise<AnnouncementItem
     try {
       const payload = await readJson<F10Payload>(url)
       const news = (payload.gszx?.data?.items ?? []).map((item) => ({
-        id: item.code || item.uniqueUrl || item.title || crypto.randomUUID(),
+        id: item.code || item.uniqueUrl || item.title || newId(),
         title: item.title ?? '',
         date: item.showDateTime
           ? new Date(item.showDateTime).toLocaleString('zh-CN', {
@@ -325,7 +326,7 @@ export async function fetchStockNews(stock: QuoteItem): Promise<AnnouncementItem
         summary: item.summary || item.title,
       }))
       const notices = (payload.gsgg ?? []).map((item) => ({
-        id: item.art_code || item.title || crypto.randomUUID(),
+        id: item.art_code || item.title || newId(),
         title: item.title ?? '',
         date: (item.notice_date || item.display_time || '').slice(0, 16),
         type: 'announcement' as const,

@@ -97,10 +97,12 @@ export function Button({
   size = 'md',
   className,
   children,
+  type = 'button',
   ...props
 }: ButtonProps) {
   return (
     <button
+      type={type}
       className={cn(
         'inline-flex items-center justify-center font-medium transition-all duration-200',
         'disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100',

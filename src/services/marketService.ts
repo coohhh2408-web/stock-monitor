@@ -1,4 +1,5 @@
 import { buildBuffettMungerBrief } from '@/services/buffettMunger'
+import { newId } from '@/lib/id'
 import type { QuoteItem, SparklineDataPoint, AIDiagnosisStub } from '@/types/market'
 
 export function generateSparkline(basePrice: number, seed = 0, points = 48): SparklineDataPoint[] {
@@ -51,7 +52,7 @@ export function buildPosition(input: {
   const tTradeSaved = Math.max(0, Math.round((originalCost - actualCost) * 100) / 100)
 
   return {
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? newId(),
     name: input.name,
     code: input.code,
     currentPrice: price,

@@ -1,4 +1,5 @@
 import type { QuoteItem, StockCatalogEntry } from '@/types/market'
+import { newId } from '@/lib/id'
 
 /** 可搜索的股票目录（模拟行情数据源，后续可接真实 API） */
 export const STOCK_CATALOG: StockCatalogEntry[] = [
@@ -61,7 +62,7 @@ export function catalogEntryToQuote(entry: StockCatalogEntry): QuoteItem {
   const changePercent = open !== 0 ? Math.round((change / open) * 10000) / 100 : 0
 
   return {
-    id: crypto.randomUUID(),
+    id: newId(),
     name: entry.name,
     code: entry.code,
     market: entry.market,

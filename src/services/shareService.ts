@@ -1,4 +1,5 @@
 import { saveToStorage, loadFromStorage, STORAGE_KEYS } from '@/lib/storage'
+import { newId } from '@/lib/id'
 import type { ShareViewStub } from '@/types/alert'
 import type { QuoteItem } from '@/types/market'
 import type { PositionItem } from '@/types/position'
@@ -92,7 +93,7 @@ export async function resolveShareSnapshot(route: ShareRoute): Promise<ShareSnap
 export async function generateShareLink(
   data: Omit<ShareSnapshot, 'id' | 'createdAt' | 'expiresAt'>,
 ): Promise<ShareViewStub> {
-  const id = crypto.randomUUID().slice(0, 8)
+  const id = newId().slice(0, 8)
   const now = new Date()
   const expires = new Date(now)
   expires.setDate(expires.getDate() + 30)

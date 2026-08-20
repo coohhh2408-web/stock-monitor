@@ -17,6 +17,7 @@ import {
 } from '@/data/mockData'
 import { loadFromStorage, loadOptionalFromStorage, saveToStorage, removeFromStorage, STORAGE_KEYS } from '@/lib/storage'
 import { APP_RESUME_EVENT } from '@/lib/nativeInit'
+import { newId } from '@/lib/id'
 import { tickQuote, syncPositionPrice, computePortfolioSummary, generateAIDiagnosis, generateSparkline, buildPosition } from '@/services/marketService'
 import { fetchLiveQuote, fetchLiveQuotes } from '@/services/quoteApi'
 import { recommendedPollMs } from '@/lib/marketHours'
@@ -627,7 +628,7 @@ export function AppProvider({
       }
 
       const record: TTradeRecord = {
-        id: crypto.randomUUID(),
+        id: newId(),
         positionId,
         direction: form.direction,
         price: form.price,
@@ -706,7 +707,7 @@ export function AppProvider({
         type: 'ADD_ALERT',
         alert: {
           ...partial,
-          id: crypto.randomUUID(),
+          id: newId(),
           createdAt: new Date().toISOString().slice(0, 10),
         },
       })

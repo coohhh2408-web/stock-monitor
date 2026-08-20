@@ -90,8 +90,9 @@ export function TTradeModal({ isOpen, position, onClose, onSubmit }: TTradeModal
           <label className="space-y-1">
             <span className="text-xs text-apple-gray-500">{form.direction === 'sell' ? '卖出' : '买入'}价格</span>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
               value={form.price || ''}
               onChange={(e) => setForm((f) => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
               className="w-full px-3 py-2 rounded-xl bg-white/60 border border-white/40 text-sm tabular focus:outline-none focus:ring-2 focus:ring-apple-blue/30"
@@ -100,17 +101,21 @@ export function TTradeModal({ isOpen, position, onClose, onSubmit }: TTradeModal
           <label className="space-y-1">
             <span className="text-xs text-apple-gray-500">股数</span>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
               value={form.shares || ''}
-              onChange={(e) => setForm((f) => ({ ...f, shares: parseInt(e.target.value) || 0 }))}
+              onChange={(e) => setForm((f) => ({ ...f, shares: parseInt(e.target.value, 10) || 0 }))}
               className="w-full px-3 py-2 rounded-xl bg-white/60 border border-white/40 text-sm tabular focus:outline-none focus:ring-2 focus:ring-apple-blue/30"
             />
           </label>
           <label className="space-y-1 col-span-2">
             <span className="text-xs text-apple-gray-500">手续费</span>
             <input
-              type="number"
-              step="0.01"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
               value={form.fee || ''}
               onChange={(e) => setForm((f) => ({ ...f, fee: parseFloat(e.target.value) || 0 }))}
               className="w-full px-3 py-2 rounded-xl bg-white/60 border border-white/40 text-sm tabular focus:outline-none focus:ring-2 focus:ring-apple-blue/30"
