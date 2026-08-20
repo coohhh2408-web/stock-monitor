@@ -120,7 +120,7 @@ async function fetchHistory(quote: QuoteItem, period: 'day' | 'week' | 'month'):
 
   const secid = toEastMoneySecid(quote.code, quote.market, quote.secid)
   const klt = PERIOD_KLT[period]
-  const lmt = period === 'month' ? 60 : 90
+  const lmt = period === 'month' ? 120 : period === 'week' ? 260 : 500
   const path =
     `/api/qt/stock/kline/get?secid=${encodeURIComponent(secid)}` +
     `&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61` +
@@ -139,7 +139,7 @@ async function fetchHistory(quote: QuoteItem, period: 'day' | 'week' | 'month'):
 
 async function fetchTencentHistory(quote: QuoteItem, period: 'day' | 'week' | 'month'): Promise<KlineBar[]> {
   const symbol = toTencentSymbol(quote.code, quote.market)
-  const span = period === 'month' ? 60 : 90
+  const span = period === 'month' ? 120 : period === 'week' ? 260 : 500
   const url =
     `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${encodeURIComponent(symbol)},${period},,,${span},qfq`
   const payload = await getJson<TencentKline>(url)
