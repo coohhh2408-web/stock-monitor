@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "node --experimental-strip-types --test src/lib/alertNotify.test.ts",
+    "test": "node --experimental-strip-types --test src/lib/*.test.ts",
     "preview": "vite preview",
     "ios:add": "mkdir -p ios && tar -xzf node_modules/@capacitor/cli/assets/ios-spm-template.tar.gz -C ios",
     "ios:build": "npm run build && npx cap sync ios",

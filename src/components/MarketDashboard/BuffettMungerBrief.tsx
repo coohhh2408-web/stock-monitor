@@ -12,6 +12,7 @@ import {
   type SkillBrief,
 } from '@/services/buffettMungerSkill'
 import { formatPlanPrice, formatVsNow, type SagePlan } from '@/services/sagePlan'
+import { bandHint, priceSeat } from '@/lib/sageBand'
 import {
   buildValueChecklist,
   type ChecklistVerdict,
@@ -367,7 +368,10 @@ function PlanBlock({ plan, stock }: { plan: SagePlan; stock: QuoteItem }) {
     plan.buyFrom !== null && plan.buyTo !== null
       ? `${formatPlanPrice(plan.buyFrom, stock)}–${formatPlanPrice(plan.buyTo, stock)}`
       : '—'
-  const buyVs = plan.buyTo !== null ? formatVsNow(plan.buyTo, plan.nowPrice) : ''
+  const buyVs =
+    plan.buyFrom !== null && plan.buyTo !== null
+      ? bandHint(priceSeat(plan.nowPrice, plan.buyFrom, plan.buyTo))
+      : ''
   return (
     <div className="mt-3 pt-3 border-t border-black/[0.05]">
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mb-2">
