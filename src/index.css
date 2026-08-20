@@ -438,3 +438,33 @@
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.035); }
 }
+
+html.mobile-preview,
+html.mobile-preview body {
+  min-height: 100%;
+  background: #111113;
+}
+
+html.mobile-preview .incoming-call-screen {
+  position: absolute;
+}
+
+.mobile-preview-stage {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #111113;
+}
+
+.mobile-preview-phone {
+  position: relative;
+  width: 390px;
+  height: min(844px, calc(100dvh - 32px));
+  border-radius: 36px;
+  overflow: hidden;
+  background: #F2F2F7;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  outline: 6px solid #2c2c2e;
+}
