@@ -21,6 +21,7 @@ import {
 import { answerLabel, type GateAnswer, type InfoRichness } from '@/services/valueSkill'
 import { buildEarningsBrief, type EarningsBrief } from '@/services/earningsBrief'
 import type { FinancialsPack, QuoteItem } from '@/types/market'
+import type { ScreenerPick } from '@/services/stockScreener'
 
 type SageView = 'list' | 'earnings' | 'research'
 type SageTone = 'buffett' | 'munger' | 'duan'
@@ -31,15 +32,17 @@ export function BuffettMungerBrief({
   stock,
   financials = null,
   financialsStatus = 'empty',
+  pick = null,
 }: {
   stock: QuoteItem
   financials?: FinancialsPack | null
   financialsStatus?: FinStatus
+  pick?: ScreenerPick | null
 }) {
-  const [view, setView] = useState<SageView>('list')
+  const [view, setView] = useState<SageView>(pick ? 'research' : 'list')
   const [research, setResearch] = useState<ResearchView>('prose')
   const checklist = buildValueChecklist(stock, financials?.latest)
-  const prose = view === 'research' ? buildBuffettMungerBrief(stock) : null
+  const prose = view === 'research' || pick ? buildBuffettMungerBrief(stock) : null
   const skill = view === 'research' ? buildSkillBrief(stock) : null
   const earnings =
     view === 'earnings' && financials ? buildEarningsBrief(stock.name, inferBusinessKind(stock), financials) : null
@@ -49,9 +52,10 @@ export function BuffettMungerBrief({
       <div className="flex items-end justify-between gap-3 mb-2.5">
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-neutral-800">价值清单</p>
-          <p className="text-[11px] text-neutral-400 mt-0.5">买点用盘口，质量关用最新财报</p>
+          <p className="text-[11px] text-neutral-400 mt-0.5">{pick ? '入选原因、三人框架、价值清单' : '买点用盘口，质量关用最新财报'}</p>
         </div>
       </div>
+      {pick && <PickReasonCard pick={pick} stock={stock} />}
       <SegmentedControl
         options={[
           { value: 'list' as const, label: '清单' },
@@ -99,6 +103,21 @@ export function BuffettMungerBrief({
       )}
       <ProvenanceNote />
     </section>
+  )
+}
+
+function PickReasonCard({ pick, stock }: { pick: ScreenerPick; stock: QuoteItem }) {
+  return (
+    <article className="mb-3 rounded-2xl border border-black/[0.06] bg-neutral-50 px-4 py-3.5">
+      <p className="text-[10px] text-neutral-400 mb-1">为什么入选</p>
+      <p className="text-[15px] font-semibold text-neutral-900 leading-snug">
+        {pick.presetLabel} · {pick.kindLabel} · {pick.statusLabel}
+      </p>
+      <p className="text-[12px] text-neutral-600 leading-relaxed mt-1.5">{pick.logic}</p>
+      <p className="text-[12px] text-neutral-500 tabular mt-1.5">
+        当前 {pick.peNow.toFixed(0)}x · 习惯 {pick.peHabit.toFixed(0)}x · 观察价 {formatQuotePrice(pick.habitPrice, stock.market)}
+      </p>
+    </article>
   )
 }
 

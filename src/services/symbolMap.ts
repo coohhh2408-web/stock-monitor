@@ -12,7 +12,17 @@ export function inferMarket(code: string, hint?: QuoteMarket): QuoteMarket {
 }
 
 export function toEastMoneySecid(code: string, market?: QuoteMarket, secid?: string): string {
-  if (secid) return secid
+  const c = code.trim()
+  const computed = computeEastMoneySecid(c, market)
+  if (!secid) return computed
+  const givenPrefix = secid.split('.')[0]
+  const computedPrefix = computed.split('.')[0]
+  // 东财列表偶发把沪市 6 开头标成 0.xxxxxx，K 线会空。
+  if (givenPrefix !== computedPrefix && (market === 'a-share' || /^\d{6}$/.test(c))) return computed
+  return secid
+}
+
+function computeEastMoneySecid(code: string, market?: QuoteMarket): string {
   const c = code.trim()
   const m = inferMarket(c, market)
   if (m === 'us-stock') return `105.${c.toUpperCase()}`

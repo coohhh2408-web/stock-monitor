@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { cn, formatListedCode, formatPercent, formatQuotePrice } from '@/lib/utils'
 import { useAppStore } from '@/store/AppStore'
 import { fetchScreenerUniverse, type ScreenerMarket } from '@/services/screenerApi'
-import { runScreener, SCREENER_PRESETS, type ScreenerHit, type ScreenerPreset } from '@/services/stockScreener'
+import { runScreener, SCREENER_PRESETS, toScreenerPick, type ScreenerHit, type ScreenerPick, type ScreenerPreset } from '@/services/stockScreener'
+import { StockDetailPanel } from '@/components/MarketDashboard/StockDetailPanel'
 import type { QuoteItem, StockCatalogEntry } from '@/types/market'
 
 const MARKETS: { value: ScreenerMarket; label: string }[] = [
@@ -12,12 +13,13 @@ const MARKETS: { value: ScreenerMarket; label: string }[] = [
 ]
 
 export function StockScreener({ isMobile = false }: { isMobile?: boolean }) {
-  const { quotes, addStock } = useAppStore()
+  const { quotes, addStock, getAIDiagnosis, generateAI } = useAppStore()
   const [market, setMarket] = useState<ScreenerMarket>('a-share')
   const [preset, setPreset] = useState<ScreenerPreset>('in-band')
   const [universe, setUniverse] = useState<QuoteItem[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState('')
+  const [selected, setSelected] = useState<{ quote: QuoteItem; pick: ScreenerPick } | null>(null)
 
   const [reload, setReload] = useState(0)
 
@@ -45,6 +47,9 @@ export function StockScreener({ isMobile = false }: { isMobile?: boolean }) {
   const hits = useMemo(() => runScreener(universe, preset), [universe, preset])
   const presetMeta = SCREENER_PRESETS.find((item) => item.id === preset) ?? SCREENER_PRESETS[0]
   const existing = useMemo(() => new Set(quotes.map((item) => item.code)), [quotes])
+  const openHit = (hit: ScreenerHit) => {
+    setSelected({ quote: hit.quote, pick: toScreenerPick(hit, preset) })
+  }
 
   return (
     <div>
@@ -108,6 +113,7 @@ export function StockScreener({ isMobile = false }: { isMobile?: boolean }) {
                 key={`${hit.quote.market}:${hit.quote.code}`}
                 hit={hit}
                 onBoard={existing.has(hit.quote.code)}
+                onOpen={() => openHit(hit)}
                 onAdd={() => void addStock(toCatalog(hit.quote))}
               />
             ))}
@@ -116,6 +122,16 @@ export function StockScreener({ isMobile = false }: { isMobile?: boolean }) {
       )}
 
       <ScreenerNote sampleSize={universe.length} />
+
+      <StockDetailPanel
+        isOpen={Boolean(selected)}
+        stock={selected?.quote ?? null}
+        pick={selected?.pick ?? null}
+        aiDiagnosis={selected ? getAIDiagnosis(selected.quote) : { status: 'idle' }}
+        onClose={() => setSelected(null)}
+        onGenerateAI={(stock) => generateAI(stock)}
+        isMobile={isMobile}
+      />
     </div>
   )
 }
@@ -153,39 +169,43 @@ function ChipRow<T extends string>({
 function ScreenerRow({
   hit,
   onBoard,
+  onOpen,
   onAdd,
 }: {
   hit: ScreenerHit
   onBoard: boolean
+  onOpen: () => void
   onAdd: () => void
 }) {
   const listed = formatListedCode(hit.quote.code, hit.quote.market)
   const gap = ((hit.habitPrice - hit.quote.price) / hit.quote.price) * 100
   return (
     <li className="rounded-2xl border border-black/[0.06] bg-white px-4 py-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[16px] font-semibold text-neutral-900 truncate leading-tight">{hit.quote.name}</p>
-          <p className="text-[12px] text-neutral-400 font-mono tabular mt-0.5">
-            {listed} · {hit.kindLabel}
-          </p>
+      <button type="button" onClick={onOpen} className="w-full text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[16px] font-semibold text-neutral-900 truncate leading-tight">{hit.quote.name}</p>
+            <p className="text-[12px] text-neutral-400 font-mono tabular mt-0.5">
+              {listed} · {hit.kindLabel}
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[16px] font-semibold tabular text-neutral-900">
+              {formatQuotePrice(hit.quote.price, hit.quote.market)}
+            </p>
+            <p className="text-[11px] tabular text-neutral-400 mt-0.5">{formatPercent(hit.quote.changePercent)}</p>
+          </div>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-[16px] font-semibold tabular text-neutral-900">
-            {formatQuotePrice(hit.quote.price, hit.quote.market)}
-          </p>
-          <p className="text-[11px] tabular text-neutral-400 mt-0.5">{formatPercent(hit.quote.changePercent)}</p>
-        </div>
-      </div>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <p className="text-[12px] text-neutral-600 leading-relaxed min-w-0">
+        <p className="text-[12px] text-neutral-600 leading-relaxed mt-2">
           {hit.peNow.toFixed(0)}x · 习惯 {hit.peHabit.toFixed(0)}x · {hit.statusLabel}
           {hit.status !== 'in-band' ? ` · 观察价 ${formatQuotePrice(hit.habitPrice, hit.quote.market)}（${gap.toFixed(0)}%）` : ''}
         </p>
+      </button>
+      <div className="mt-2 flex justify-end">
         {onBoard ? (
-          <span className="text-[12px] text-neutral-400 shrink-0">已在看板</span>
+          <span className="text-[12px] text-neutral-400">已在看板</span>
         ) : (
-          <button type="button" onClick={onAdd} className="text-[12px] font-medium text-[#007AFF] shrink-0">
+          <button type="button" onClick={onAdd} className="text-[12px] font-medium text-[#007AFF]">
             加入看板
           </button>
         )}

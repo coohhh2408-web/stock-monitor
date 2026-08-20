@@ -10,6 +10,7 @@ import { fetchFlashNews, fetchStockNews } from '@/services/newsApi'
 import { fetchChartSeries, fetchQuoteSnapshot } from '@/services/klineApi'
 import { fetchFinancials } from '@/services/financialsApi'
 import type { QuoteItem, AIDiagnosisStub, AnnouncementItem, ChartPeriod, FinancialsPack, KlineBar } from '@/types/market'
+import type { ScreenerPick } from '@/services/stockScreener'
 
 type DetailTab = 'ai' | 'news24h' | 'reports'
 
@@ -28,6 +29,7 @@ interface StockDetailPanelProps {
   onClose: () => void
   onGenerateAI: (stock: QuoteItem) => void
   isMobile?: boolean
+  pick?: ScreenerPick | null
 }
 
 export function StockDetailPanel({
@@ -37,6 +39,7 @@ export function StockDetailPanel({
   onClose,
   onGenerateAI,
   isMobile = false,
+  pick = null,
 }: StockDetailPanelProps) {
   const [tab, setTab] = useState<DetailTab>('ai')
   const [selectedNews, setSelectedNews] = useState<AnnouncementItem | null>(null)
@@ -255,7 +258,7 @@ export function StockDetailPanel({
         <div className="relative min-h-[160px]">
           {tab === 'ai' && (
             <div>
-              <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} />
+              <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} pick={pick} />
               {aiDiagnosis.status === 'loading' ? (
                 <div className="ai-glow-card">
                   <SkeletonText lines={4} />

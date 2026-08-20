@@ -72,6 +72,31 @@ function matchPreset(row: ScreenerHit, preset: ScreenerPreset): boolean {
   return true
 }
 
+export interface ScreenerPick {
+  preset: ScreenerPreset
+  presetLabel: string
+  kindLabel: string
+  peNow: number
+  peHabit: number
+  statusLabel: string
+  habitPrice: number
+  logic: string
+}
+
+export function toScreenerPick(hit: ScreenerHit, preset: ScreenerPreset): ScreenerPick {
+  const presetLabel = SCREENER_PRESETS.find((item) => item.id === preset)?.label ?? '选股'
+  return {
+    preset,
+    presetLabel,
+    kindLabel: hit.kindLabel,
+    peNow: hit.peNow,
+    peHabit: hit.peHabit,
+    statusLabel: hit.statusLabel,
+    habitPrice: hit.habitPrice,
+    logic: `入选「${presetLabel}」。按名称和行业归为「${hit.kindLabel}」，这门生意的习惯市盈率约 ${hit.peHabit.toFixed(0)} 倍，当前约 ${hit.peNow.toFixed(0)} 倍，所以是${hit.statusLabel}。样本只覆盖市值靠前、且有市盈率的股票，不是全市场穷举，也不是荐股。三人短评是同一套框架的对照，不是大师原话。`,
+  }
+}
+
 function roundMoney(n: number, ref: number): number {
   if (ref >= 10) return Math.round(n * 100) / 100
   if (ref >= 1) return Math.round(n * 1000) / 1000
