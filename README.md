@@ -2,6 +2,8 @@
 
 个人股票监控。**网页已经定型**，这份就是正式版；后面只修线上问题，不再并行改产品。iOS 仍是薄壳，跟着这份网页走。
 
+**正式站：** https://coohhh2408-web.github.io/stock-monitor/
+
 打开即可，不需要注册，也不需要自建后端。数据仅供参考，不构成投资建议。
 
 ## 定型范围
@@ -39,7 +41,7 @@ npm run preview   # 本机核对 http://localhost:4173
 | Cloudflare Pages / Netlify / Vercel | `npm run build` | `dist` |
 | GitHub Pages | 打开仓库 Actions「网页定型版」，Pages 源选 GitHub Actions | 自动 |
 
-GitHub 项目页（`https://<用户>.github.io/stock-monitor/`）工作流会设置 `VITE_BASE=/stock-monitor/`。根域名托管不要设这个变量。
+当前正式站就是 GitHub Pages：https://coohhh2408-web.github.io/stock-monitor/ 。工作流会设置 `VITE_BASE=/stock-monitor/`。根域名托管不要设这个变量。
 
 - 行情：腾讯财经（浏览器直连）+ 东方财富备用
 - 到价：区内只响一次；弹窗是来电掩护，接听才看到股价
