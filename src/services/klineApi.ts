@@ -1,4 +1,5 @@
 import { usesDevProxy } from '@/lib/devProxy'
+import { parseNumber, parsePositiveNumber } from '@/lib/quoteNumbers'
 import { toEastMoneySecid, toTencentSymbol } from '@/services/symbolMap'
 import type { ChartPeriod, KlineBar, QuoteItem } from '@/types/market'
 
@@ -30,9 +31,7 @@ const PERIOD_KLT: Record<Exclude<ChartPeriod, 'intraday' | '5d'>, number> = {
 }
 
 function num(value: unknown): number | null {
-  if (value === null || value === undefined || value === '-' || value === '') return null
-  const n = typeof value === 'number' ? value : Number(value)
-  return Number.isFinite(n) ? n : null
+  return parseNumber(value)
 }
 
 async function getJson<T>(url: string): Promise<T> {
@@ -197,32 +196,32 @@ export async function fetchQuoteSnapshot(quote: QuoteItem): Promise<QuoteItem> {
   const row = payload.data
   if (!row) return quote
 
-  const price = num(row.f43) ?? quote.price
-  const prevClose = num(row.f60) ?? quote.prevClose ?? quote.open
+  const price = parsePositiveNumber(row.f43) ?? quote.price
+  const prevClose = parsePositiveNumber(row.f60) ?? quote.prevClose ?? quote.open
   const peDyn = num(row.f162)
   const peTtm = num(row.f163) ?? num(row.f164)
   const mapped: Partial<QuoteItem> = {
     name: String(row.f58 || quote.name),
     price,
-    high: num(row.f44) ?? quote.high,
-    low: num(row.f45) ?? quote.low,
-    open: num(row.f46) ?? quote.open,
-    volume: num(row.f47) ?? quote.volume,
-    amount: num(row.f48) ?? quote.amount,
-    volumeRatio: num(row.f50) ?? quote.volumeRatio,
-    limitUp: num(row.f51) ?? quote.limitUp,
-    limitDown: num(row.f52) ?? quote.limitDown,
+    high: parsePositiveNumber(row.f44) ?? quote.high,
+    low: parsePositiveNumber(row.f45) ?? quote.low,
+    open: parsePositiveNumber(row.f46) ?? quote.open,
+    volume: parsePositiveNumber(row.f47) ?? quote.volume,
+    amount: parsePositiveNumber(row.f48) ?? quote.amount,
+    volumeRatio: parsePositiveNumber(row.f50) ?? quote.volumeRatio,
+    limitUp: parsePositiveNumber(row.f51) ?? quote.limitUp,
+    limitDown: parsePositiveNumber(row.f52) ?? quote.limitDown,
     prevClose,
-    marketCap: num(row.f116) ?? quote.marketCap,
-    circMarketCap: num(row.f117) ?? quote.circMarketCap,
+    marketCap: parsePositiveNumber(row.f116) ?? quote.marketCap,
+    circMarketCap: parsePositiveNumber(row.f117) ?? quote.circMarketCap,
     industry: row.f127 && row.f127 !== '-' ? String(row.f127) : quote.industry,
     pe: peDyn ?? peTtm ?? quote.pe,
     peTtm: peTtm ?? quote.peTtm,
-    pb: num(row.f167) ?? quote.pb,
-    turnover: num(row.f168) ?? quote.turnover,
+    pb: parsePositiveNumber(row.f167) ?? quote.pb,
+    turnover: parsePositiveNumber(row.f168) ?? quote.turnover,
     change: num(row.f169) ?? quote.change,
     changePercent: num(row.f170) ?? quote.changePercent,
-    amplitude: num(row.f171) ?? quote.amplitude,
+    amplitude: parsePositiveNumber(row.f171) ?? quote.amplitude,
     secid,
     updatedAt: new Date().toISOString(),
   }

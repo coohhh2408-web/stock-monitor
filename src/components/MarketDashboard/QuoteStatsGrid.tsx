@@ -1,3 +1,4 @@
+import { formatPercentRate, openVsPrevAccent } from '@/lib/quoteNumbers'
 import { cn, formatAmount, formatDash, formatLargeNumber, formatListedCode, formatMarketCap, formatPrice, formatVolume } from '@/lib/utils'
 import { cashConversion } from '@/services/financialsApi'
 import type { FinancialsPack, QuoteItem } from '@/types/market'
@@ -50,17 +51,17 @@ function pairEdge(index: number, total: number): 'right' | 'bottom' | 'both' | '
 export function QuoteStatsGrid({ stock, financials }: { stock: QuoteItem; financials?: FinancialsPack | null }) {
   const listed = formatListedCode(stock.code, stock.market)
   const showLimits = stock.market === 'a-share' && (stock.limitUp !== undefined || stock.limitDown !== undefined)
-  const vsOpen = stock.price - stock.open
+  const openAccent = openVsPrevAccent(stock.open, stock.prevClose)
 
   const cells: { label: string; value: string; accent?: Accent }[] = [
-    { label: '今开', value: formatPrice(stock.open), accent: vsOpen >= 0 ? 'up' : 'down' },
+    { label: '今开', value: formatPrice(stock.open), accent: openAccent },
     { label: '最高', value: formatPrice(stock.high), accent: 'up' },
     { label: '最低', value: formatPrice(stock.low), accent: 'down' },
     { label: '昨收', value: formatPrice(stock.prevClose ?? stock.open) },
     { label: '成交量', value: formatVolume(stock.volume, stock.market) },
     { label: '成交额', value: formatAmount(stock.amount, stock.market) },
-    { label: '换手', value: stock.turnover !== undefined ? `${stock.turnover.toFixed(2)}%` : '—' },
-    { label: '振幅', value: stock.amplitude !== undefined ? `${stock.amplitude.toFixed(2)}%` : '—' },
+    { label: '换手', value: formatPercentRate(stock.turnover) },
+    { label: '振幅', value: formatPercentRate(stock.amplitude) },
     { label: '量比', value: formatDash(stock.volumeRatio) },
     { label: peLabel(stock), value: formatDash(stock.pe) },
     { label: '市净率', value: formatDash(stock.pb) },

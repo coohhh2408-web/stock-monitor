@@ -1,5 +1,6 @@
 import { jsonp, loadScript } from '@/lib/jsonp'
 import { catalogEntryToQuote, searchStockCatalog } from '@/data/stockCatalog'
+import { parsePositiveNumber, parseTencentQuoteFields } from '@/lib/quoteNumbers'
 import { parseSinaSuggest, parseTencentHint } from '@/lib/stockSearch'
 import { inferMarket, toEastMoneySecid, toTencentSymbol } from '@/services/symbolMap'
 import type { QuoteItem, SparklineDataPoint, StockCatalogEntry } from '@/types/market'
@@ -52,9 +53,9 @@ export function mergeLiveQuote(base: QuoteItem, live: Partial<QuoteItem>): Quote
     open,
     high: live.high ?? Math.max(base.high, price),
     low: live.low ?? Math.min(base.low, price),
-    volume: live.volume ?? base.volume,
-    amount: live.amount ?? base.amount,
-    turnover: live.turnover ?? base.turnover,
+    volume: parsePositiveNumber(live.volume) ?? base.volume,
+    amount: parsePositiveNumber(live.amount) ?? base.amount,
+    turnover: parsePositiveNumber(live.turnover) ?? base.turnover,
     pe: live.pe ?? base.pe,
     peTtm: live.peTtm ?? base.peTtm,
     pb: live.pb ?? base.pb,
@@ -139,43 +140,18 @@ async function fetchTencentQuotes(items: QuoteItem[]): Promise<Partial<QuoteItem
     const key = `v_${toTencentSymbol(q.code, q.market)}`
     const raw = (window as unknown as Record<string, string | undefined>)[key]
     if (!raw) continue
-    const p = raw.split('~')
-    const price = num(p[3])
-    if (price === null || price <= 0) continue
-    const prevClose = num(p[4]) ?? price
-    const open = num(p[5]) ?? price
-    const high = num(p[33]) ?? price
-    const low = num(p[34]) ?? price
+    const parsed = parseTencentQuoteFields(raw)
+    if (!parsed) continue
     try {
       delete (window as unknown as Record<string, unknown>)[key]
     } catch {
       /* ignore */
     }
-    const amountWan = num(p[37])
-    const circYi = num(p[44])
-    const capYi = num(p[45])
     result.push({
       code: q.code,
-      name: p[1] || q.name,
       market: q.market,
-      price,
-      prevClose,
-      open,
-      high,
-      low,
-      change: Math.round((price - prevClose) * 100) / 100,
-      changePercent: prevClose ? Math.round(((price - prevClose) / prevClose) * 10000) / 100 : 0,
-      volume: num(p[36]) ?? undefined,
-      amount: amountWan !== null ? amountWan * 1e4 : undefined,
-      turnover: num(p[38]) ?? undefined,
-      pe: num(p[39]) ?? undefined,
-      amplitude: num(p[43]) ?? undefined,
-      circMarketCap: circYi !== null ? circYi * 1e8 : undefined,
-      marketCap: capYi !== null ? capYi * 1e8 : undefined,
-      pb: num(p[46]) ?? undefined,
-      limitUp: num(p[47]) ?? undefined,
-      limitDown: num(p[48]) ?? undefined,
-      volumeRatio: num(p[49]) ?? undefined,
+      ...parsed,
+      name: parsed.name || q.name,
       updatedAt: new Date().toISOString(),
     })
   }
