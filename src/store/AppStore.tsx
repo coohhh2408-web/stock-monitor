@@ -368,6 +368,8 @@ interface AppContextValue {
   upsertPosition: (input: {
     id?: string
     code: string
+    name?: string
+    market?: QuoteItem['market']
     shares: number
     originalCost: number
     actualCost?: number
@@ -652,8 +654,16 @@ export function AppProvider({
   )
 
   const upsertPosition = useCallback(
-    (input: { id?: string; code: string; shares: number; originalCost: number; actualCost?: number }) => {
-      const quote = state.quotes.find((q) => q.code === input.code)
+    (input: {
+      id?: string
+      code: string
+      name?: string
+      market?: QuoteItem['market']
+      shares: number
+      originalCost: number
+      actualCost?: number
+    }) => {
+      const quote = quotesRef.current.find((q) => q.code === input.code)
       const existing = input.id
         ? state.positions.find((p) => p.id === input.id)
         : state.positions.find((p) => p.code === input.code)
@@ -663,10 +673,31 @@ export function AppProvider({
         return false
       }
 
-      const name = quote?.name ?? existing?.name
+      const name = quote?.name ?? existing?.name ?? input.name
       if (!name) {
-        toast('请先在行情页添加该股票', 'error')
+        toast('先搜到股票，再填股数和成本', 'error')
         return false
+      }
+
+      if (!quote) {
+        const placeholder = catalogEntryToQuote({
+          name,
+          code: input.code,
+          market: input.market ?? 'a-share',
+          basePrice: input.originalCost,
+        })
+        dispatch({ type: 'ADD_QUOTE', quote: placeholder })
+        if (state.settings.liveQuotesEnabled) {
+          void fetchLiveQuote({
+            name,
+            code: input.code,
+            market: placeholder.market,
+            basePrice: placeholder.price,
+            secid: placeholder.secid,
+          }).then((live) => {
+            dispatch({ type: 'ADD_QUOTE', quote: { ...live, id: placeholder.id, isWatchlisted: true } })
+          }).catch(() => undefined)
+        }
       }
 
       const position = buildPosition({
@@ -684,7 +715,7 @@ export function AppProvider({
       toast(existing ? '持仓已更新' : '已添加持仓', 'success')
       return true
     },
-    [state.quotes, state.positions, toast],
+    [state.positions, state.settings.liveQuotesEnabled, toast],
   )
 
   const deletePosition = useCallback(

@@ -31,7 +31,11 @@ export function PositionPnL({ isMobile = false }: { isMobile?: boolean }) {
     setEditorOpen(true)
   }
 
-  const handleSubmit = (draft: PositionDraft) => upsertPosition({ ...draft, id: editing?.id })
+  const handleSubmit = (draft: PositionDraft) =>
+    upsertPosition({
+      ...draft,
+      id: editing?.id,
+    })
 
   return (
     <div>
