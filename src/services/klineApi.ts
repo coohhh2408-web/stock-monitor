@@ -1,5 +1,6 @@
 import { usesDevProxy } from '@/lib/devProxy'
-import { parseNumber, parsePositiveNumber } from '@/lib/quoteNumbers'
+import { deriveTurnover, parseNumber, parsePositiveNumber } from '@/lib/quoteNumbers'
+import { fetchLiveQuote } from '@/services/quoteApi'
 import { toEastMoneySecid, toTencentSymbol } from '@/services/symbolMap'
 import type { ChartPeriod, KlineBar, QuoteItem } from '@/types/market'
 
@@ -230,12 +231,40 @@ export async function fetchQuoteSnapshot(quote: QuoteItem): Promise<QuoteItem> {
     mapped.changePercent ??
     (prevClose ? Math.round((change / prevClose) * 10000) / 100 : quote.changePercent)
 
-  return {
+  let merged: QuoteItem = {
     ...quote,
     ...mapped,
     change,
     changePercent,
   }
+
+  if (!parsePositiveNumber(merged.turnover) || !parsePositiveNumber(merged.amplitude)) {
+    try {
+      const live = await fetchLiveQuote({
+        name: merged.name,
+        code: merged.code,
+        market: merged.market,
+        basePrice: merged.price,
+        secid: merged.secid,
+      })
+      merged = {
+        ...merged,
+        turnover: parsePositiveNumber(merged.turnover) ?? live.turnover,
+        amplitude: parsePositiveNumber(merged.amplitude) ?? live.amplitude,
+        volume: parsePositiveNumber(merged.volume) ?? live.volume,
+        amount: parsePositiveNumber(merged.amount) ?? live.amount,
+        volumeRatio: parsePositiveNumber(merged.volumeRatio) ?? live.volumeRatio,
+      }
+    } catch {
+      /* 腾讯补数失败就保持东财已有字段 */
+    }
+  }
+
+  if (!parsePositiveNumber(merged.turnover)) {
+    merged = { ...merged, turnover: deriveTurnover(merged.amount, merged.circMarketCap) }
+  }
+
+  return merged
 }
 
 export function isCandlePeriod(period: ChartPeriod): boolean {

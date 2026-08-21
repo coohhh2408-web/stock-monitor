@@ -176,9 +176,26 @@ export function PositionEditor({
             </label>
             {query.trim() && (
               <div className="rounded-xl border border-black/[0.06] overflow-hidden bg-white">
+                {quotes
+                  .filter(
+                    (q) =>
+                      existingCodes.includes(q.code) &&
+                      (q.name.includes(query.trim()) || q.code.includes(query.trim())),
+                  )
+                  .slice(0, 3)
+                  .map((q) => (
+                    <p key={q.code} className="px-3 py-2.5 text-sm text-neutral-500">
+                      {q.name} 已有持仓，请关掉窗口后点卡片编辑。
+                    </p>
+                  ))}
                 {loading && hits.length === 0 ? (
                   <p className="px-3 py-2.5 text-sm text-neutral-400">正在搜索…</p>
-                ) : hits.length === 0 ? (
+                ) : hits.length === 0 &&
+                  !quotes.some(
+                    (q) =>
+                      existingCodes.includes(q.code) &&
+                      (q.name.includes(query.trim()) || q.code.includes(query.trim())),
+                  ) ? (
                   <p className="px-3 py-2.5 text-sm text-neutral-400">未找到「{query}」</p>
                 ) : (
                   hits.slice(0, 6).map((entry) => (

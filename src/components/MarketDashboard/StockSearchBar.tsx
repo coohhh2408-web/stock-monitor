@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useStockSearch } from '@/hooks/useStockSearch'
-import type { MarketCategory, StockCatalogEntry } from '@/types/market'
+import type { MarketCategory, QuoteItem, StockCatalogEntry } from '@/types/market'
 
 const FILTER_OPTIONS: { value: MarketCategory; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -23,24 +23,32 @@ interface StockSearchBarProps {
   category: MarketCategory
   searchQuery: string
   existingCodes: string[]
+  quotes?: QuoteItem[]
   isMobile?: boolean
   onCategoryChange: (category: MarketCategory) => void
   onSearchChange: (query: string) => void
   onAddStock: (entry: StockCatalogEntry) => boolean | Promise<boolean>
+  onOpenExisting?: (quote: QuoteItem) => void
 }
 
 export function StockSearchBar({
   category,
   searchQuery,
   existingCodes,
+  quotes = [],
   isMobile = false,
   onCategoryChange,
   onSearchChange,
   onAddStock,
+  onOpenExisting,
 }: StockSearchBarProps) {
   const [focused, setFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { hits: suggestions, loading } = useStockSearch(searchQuery, existingCodes)
+  const q = searchQuery.trim().toLowerCase()
+  const onBoard = q
+    ? quotes.filter((item) => item.name.toLowerCase().includes(q) || item.code.toLowerCase().includes(q)).slice(0, 5)
+    : []
 
   const showDropdown = focused && searchQuery.trim().length > 0
 
@@ -51,8 +59,16 @@ export function StockSearchBar({
     inputRef.current?.blur()
   }
 
+  const handleOpen = (quote: QuoteItem) => {
+    onOpenExisting?.(quote)
+    onSearchChange('')
+    setFocused(false)
+    inputRef.current?.blur()
+  }
+
   const handleAddFirst = () => {
-    if (suggestions[0]) handleAdd(suggestions[0])
+    if (onBoard[0] && onOpenExisting) handleOpen(onBoard[0])
+    else if (suggestions[0]) handleAdd(suggestions[0])
     else if (searchQuery.trim()) inputRef.current?.focus()
   }
 
@@ -76,9 +92,9 @@ export function StockSearchBar({
             onFocus={() => setFocused(true)}
             onBlur={() => setTimeout(() => setFocused(false), 150)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && suggestions[0]) {
+              if (e.key === 'Enter') {
                 e.preventDefault()
-                handleAdd(suggestions[0])
+                handleAddFirst()
               }
             }}
             className={cn(
@@ -106,9 +122,26 @@ export function StockSearchBar({
             'absolute left-0 right-0 top-full mt-1.5 z-20 bg-white overflow-hidden',
             isMobile ? 'rounded-[12px] shadow-[0_8px_28px_rgba(0,0,0,0.12)]' : 'rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-black/[0.04]',
           )}>
-            {loading && suggestions.length === 0 ? (
+            {onBoard.length > 0 &&
+              onBoard.map((quote) => (
+                <button
+                  key={`on-${quote.id}`}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleOpen(quote)}
+                  className="w-full flex items-center justify-between px-4 py-3 active:bg-neutral-100 transition-colors text-left border-b border-black/[0.04]"
+                >
+                  <div>
+                    <p className="text-[15px] font-medium text-neutral-900">{quote.name}</p>
+                    <p className="text-[13px] text-neutral-400 font-mono tabular mt-0.5">
+                      {quote.code} · 已在看板
+                    </p>
+                  </div>
+                  <span className="text-[15px] font-medium text-[#007AFF] shrink-0 ml-3">打开</span>
+                </button>
+              ))}
+            {loading && suggestions.length === 0 && onBoard.length === 0 ? (
               <p className="px-4 py-3 text-sm text-neutral-400">正在搜索全市场…</p>
-            ) : suggestions.length === 0 ? (
+            ) : suggestions.length === 0 && onBoard.length === 0 ? (
               <p className="px-4 py-3 text-sm text-neutral-400">未找到「{searchQuery}」</p>
             ) : (
               suggestions.map((entry) => (

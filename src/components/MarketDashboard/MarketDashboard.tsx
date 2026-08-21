@@ -79,10 +79,12 @@ export function MarketDashboard({ isMobile = false }: { isMobile?: boolean }) {
         category={category}
         searchQuery={searchQuery}
         existingCodes={existingCodes}
+        quotes={quotes}
         isMobile={isMobile}
         onCategoryChange={setCategory}
         onSearchChange={setSearchQuery}
         onAddStock={addStock}
+        onOpenExisting={openDetail}
       />
 
       {isMobile ? (
