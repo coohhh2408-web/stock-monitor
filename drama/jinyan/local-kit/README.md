@@ -4,8 +4,7 @@
 
 | 工具 | 指南 |
 |---|---|
-| **Gemini 生图（本地）** | **`GEMINI-LOCAL.md`** ← 主路径 |
-| 即梦生图/视频 | `JIMENG-CLICKS.md` |
+| **Gemini 生图 + 即梦视频** | **`GEMINI-LOCAL.md`** ← 主路径 |
 | 分镜提示词 | `prompts/E01-shots.md` |
 
 ---

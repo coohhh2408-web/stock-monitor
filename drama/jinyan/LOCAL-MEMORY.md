@@ -35,11 +35,12 @@
 
 ## 三、SS 已确认偏好
 
-1. **生产工具：** 本机 **Chrome + Gemini** 生图为主（`GEMINI-LOCAL.md`）
-2. **即梦：** 可用，尤其图生视频；云端 VM 需单独登录，**日常在 Mac 做**
-3. **合成：** 剪映（配音、字幕、60 秒/集）
-4. **云端 Agent：** 可开 VM Chrome，但 Google/即梦登录需用户在云桌面操作；Agent 负责**改提示词、写分镜**，不代点本机
-5. **穿搭：** 必须吸引 35M — 见第四节
+1. **生产流程（定稿）：** **Gemini 出静图** → **即梦 Seedance 图生视频** → **剪映合成**
+2. **Gemini：** Chrome → gemini.google.com（Google 登录）
+3. **即梦：** 仅图生视频，不做文生图 → `GEMINI-LOCAL.md` + `JIMENG-CLICKS.md`
+4. **合成：** 剪映（60 秒/集）
+5. **穿搭：** 35M 男频 — `COSTUME-MALE35.md`
+6. **S02 修正：** 只生电脑屏特写，马维岳用 VO，不生成配角正脸
 
 ---
 
@@ -172,7 +173,7 @@ git checkout cursor/jinyan-drama-scripts-9047
 | 「写 E6–E10」 | 补分镜到 local-kit |
 | 「长靴换一款」 | 查 B1–B8 给下一集编号 |
 
-**不要重复问：** 即梦 vs Gemini — 已定为 **本地 Gemini 生图为主**。
+**不要重复问：** 即梦 vs Gemini — 已定为 **Gemini 静图 + 即梦视频 + 剪映**。
 
 ---
 
