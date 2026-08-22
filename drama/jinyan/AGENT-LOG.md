@@ -71,7 +71,12 @@ SS（产品经理）反馈：当前 `PRODUCTION-GUIDE.md` 女主穿搭「不够�
 
 ---
 
-## [DONE] 任务 #002 · 红果 70 集 + 即梦产线
+## [DONE] 任务 #004 · 穿搭 v3：长靴 + 政商黑系 + 仿皮草
+
+**SS 补充：** 丝袜之外加长靴；政商相关女性黑色性感简约；毛绒/皮草质感  
+**已更新：** `COSTUME-MALE35.md` v3、`PRODUCTION-GUIDE.md` §三、`ep01-05-jimeng.md` 提示词
+
+---
 
 - 产出：`PRODUCTION-GUIDE.md`、`ep70-master-outline.md`、`ep01-05-jimeng.md`
 - 规格：70 集 × 60s，首卡 E10
