@@ -1,0 +1,13 @@
+{
+  "env": {
+    "ANTHROPIC_AUTH_TOKEN": "sk-sp-YOUR_CODING_PLAN_KEY",
+    "ANTHROPIC_BASE_URL": "https://coding.dashscope.aliyuncs.com/apps/anthropic",
+    "ANTHROPIC_MODEL": "qwen3.7-plus",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "qwen3.7-plus",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "qwen3.7-plus",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "qwen3.7-plus",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "qwen3.7-plus",
+    "API_TIMEOUT_MS": "300000",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": 1
+  }
+}
