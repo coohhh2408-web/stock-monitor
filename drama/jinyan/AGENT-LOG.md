@@ -73,7 +73,13 @@ SS（产品经理）反馈：当前 `PRODUCTION-GUIDE.md` 女主穿搭「不够�
 
 ---
 
-## [DONE] 任务 #006 · 长靴款式库 B1–B8 轮换
+## [DONE] 任务 #007 · 本地即梦生产包 local-kit/
+
+**目标：** SS 本机 pull 后可直接开即梦操作  
+**路径：** `drama/jinyan/local-kit/`（README + JIMENG-CLICKS + prompts/E01）  
+**阻塞：** 即梦生成需 SS 本机登录，Agent 无法代点本机界面
+
+---
 
 **SS 反馈：** 长靴颜色款式单一，看多了会累  
 **方案：** 8 款长靴（材质/颜色/跟型错开），按集轮换；相邻两集同角色不重复  
