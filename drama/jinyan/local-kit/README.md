@@ -1,6 +1,12 @@
-# 《谨言》本地即梦生产包 · START HERE
+# 《谨言》本地生产包 · START HERE
 
-**给 SS：** 在本机 Mac 打开即梦，按本文件夹顺序操作。Cloud Agent 无法替你点本机界面，但可对照本包逐镜指挥。
+**推荐：在你 Mac 上用 Chrome 打开 Gemini 制作**（云端 VM 登录 Google/即梦都麻烦）。
+
+| 工具 | 指南 |
+|---|---|
+| **Gemini 生图（本地）** | **`GEMINI-LOCAL.md`** ← 主路径 |
+| 即梦生图/视频 | `JIMENG-CLICKS.md` |
+| 分镜提示词 | `prompts/E01-shots.md` |
 
 ---
 
