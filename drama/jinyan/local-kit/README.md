@@ -22,11 +22,10 @@ cd drama/jinyan/local-kit
 
 ---
 
-## 第二步：打开即梦并登录
+## 第二步：选工具
 
-1. 浏览器打开：https://jimeng.jianying.com
-2. **登录**（手机 / 抖音）— 不登录无法出图
-3. 画幅选 **9:16 竖屏**
+- **Gemini（推荐本地）：** Chrome → gemini.google.com → 看 **`GEMINI-LOCAL.md`**
+- **即梦：** jimeng.jianying.com → 看 `JIMENG-CLICKS.md`
 
 ---
 

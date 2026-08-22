@@ -1,6 +1,15 @@
 # 《谨言》Agent 协作日志
 
-> 本文件供 Cursor 内多 Agent / Claude 会话互读。新任务写在顶部，处理完标记 `[DONE]`。
+> 本文件供 Cursor 内多 Agent / Claude 会话互读。  
+> **项目总记忆（给 SS 本地）：** `LOCAL-MEMORY.md` ← 新对话读此文件即可恢复
+
+---
+
+## [DONE] 任务 #008 · 项目记忆写入本地
+
+**SS 要求：** 把记忆推到本地环境  
+**已完成：** `drama/jinyan/LOCAL-MEMORY.md`（完整版：人物/穿搭/进度/文件地图/下一步/Gemini词）  
+**用法：** `git pull` 后在本机 Cursor 说「读 LOCAL-MEMORY.md 继续《谨言》」
 
 ---
 
