@@ -7,6 +7,8 @@ dist
 dist-ssr
 .env
 .env.local
+.env.codingplan
+.codingplan.local
 .DS_Store
 *.tsbuildinfo
 .tmp_face_search.swift

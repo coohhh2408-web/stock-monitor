@@ -9,9 +9,44 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { homedir } from 'os'
-import { join } from 'path'
+import { dirname, join, resolve } from 'path'
+import { fileURLToPath } from 'url'
 import { createInterface } from 'readline/promises'
 import { stdin as input, stdout as output } from 'process'
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const LOCAL_KEY_FILES = [
+  join(ROOT, '.codingplan.local'),
+  join(ROOT, '.env.codingplan'),
+  join(homedir(), '.codingplan.local'),
+]
+
+function readLocalKeyFile() {
+  for (const path of LOCAL_KEY_FILES) {
+    if (!existsSync(path)) continue
+    const text = readFileSync(path, 'utf8')
+    const lines = text.split(/\r?\n/)
+    let key = ''
+    let provider = ''
+    let model = ''
+    for (const raw of lines) {
+      const line = raw.trim()
+      if (!line || line.startsWith('#')) continue
+      const eq = line.indexOf('=')
+      if (eq === -1) {
+        if (!key && line.startsWith('sk-')) key = line
+        continue
+      }
+      const name = line.slice(0, eq).trim()
+      const value = line.slice(eq + 1).trim().replace(/^['"]|['"]$/g, '')
+      if (name === 'CODING_PLAN_API_KEY' || name === 'ANTHROPIC_AUTH_TOKEN') key = value
+      if (name === 'CODING_PLAN_PROVIDER') provider = value
+      if (name === 'CODING_PLAN_MODEL' || name === 'ANTHROPIC_MODEL') model = value
+    }
+    if (key) return { key, provider, model, path }
+  }
+  return null
+}
 
 const PROVIDERS = {
   aliyun: {
@@ -96,6 +131,13 @@ function printHelp() {
   npm run setup:claude-codingplan -- --provider aliyun --key sk-sp-xxx
   npm run setup:claude-codingplan -- --check
 
+也可用本地私密文件（已 gitignore）:
+  .codingplan.local  或  .env.codingplan  或  ~/.codingplan.local
+  内容示例:
+    CODING_PLAN_API_KEY=sk-sp-xxx
+    CODING_PLAN_PROVIDER=aliyun
+    CODING_PLAN_MODEL=qwen3.7-plus
+
 选项:
   --provider aliyun|volcengine|tencent   默认 aliyun
   --key <api-key>                        Coding Plan 专属 API Key
@@ -161,7 +203,13 @@ async function main() {
     return
   }
 
-  const providerName = (process.env.CODING_PLAN_PROVIDER || args.provider || 'aliyun').toLowerCase()
+  const local = readLocalKeyFile()
+  const providerName = (
+    process.env.CODING_PLAN_PROVIDER ||
+    args.provider ||
+    local?.provider ||
+    'aliyun'
+  ).toLowerCase()
   const provider = PROVIDERS[providerName]
   if (!provider) {
     console.error(`未知 provider: ${providerName}，可选: ${Object.keys(PROVIDERS).join(', ')}`)
@@ -174,6 +222,8 @@ async function main() {
 
   if (args.check) {
     checkConfig(claudeDir, claudeJsonPath)
+    if (local) console.log(`本地 Key 文件: ${local.path}（已检测到，未打印明文）\n`)
+    else console.log('本地 Key 文件: 未找到（.codingplan.local / .env.codingplan / ~/.codingplan.local）\n')
     return
   }
 
@@ -181,31 +231,44 @@ async function main() {
   console.log(`控制台: ${provider.consoleUrl}`)
   console.log(`Base URL: ${provider.baseUrl}`)
   console.log(`API Key: ${provider.keyHint}\n`)
+  if (local?.path) console.log(`已读取本地 Key 文件: ${local.path}\n`)
 
-  let apiKey = process.env.CODING_PLAN_API_KEY || args.key
-  let model = process.env.CODING_PLAN_MODEL || args.model || provider.defaultModel
+  let apiKey = process.env.CODING_PLAN_API_KEY || args.key || local?.key || ''
+  let model =
+    process.env.CODING_PLAN_MODEL || args.model || local?.model || provider.defaultModel
 
-  const needsPrompt = !apiKey || (!args.model && !process.env.CODING_PLAN_MODEL)
+  const hasModelOverride = Boolean(
+    process.env.CODING_PLAN_MODEL || args.model || local?.model,
+  )
+  const needsPrompt = !apiKey || !hasModelOverride
   if (needsPrompt) {
-    const rl = createInterface({ input, output })
-    try {
+    if (!input.isTTY) {
       if (!apiKey) {
-        apiKey = await prompt(rl, `请输入 Coding Plan API Key: `)
-      }
-      if (!apiKey) {
-        console.error('未提供 API Key。可设环境变量 CODING_PLAN_API_KEY 或用 --key 传入。')
+        console.error('未提供 API Key。')
+        console.error('任选其一：')
+        console.error('  1. CODING_PLAN_API_KEY=sk-sp-xxx npm run setup:claude-codingplan')
+        console.error('  2. 在仓库根目录写 .codingplan.local（见 .codingplan.local.example）')
+        console.error('  3. npm run setup:claude-codingplan -- --key sk-sp-xxx --force')
         process.exit(1)
       }
-      if (!args.model && !process.env.CODING_PLAN_MODEL) {
-        const customModel = await prompt(rl, `模型名 [${model}]: `, model)
-        model = customModel
+    } else {
+      const rl = createInterface({ input, output })
+      try {
+        if (!apiKey) {
+          apiKey = await prompt(rl, `请输入 Coding Plan API Key: `)
+        }
+        if (!apiKey) {
+          console.error('未提供 API Key。可设环境变量 CODING_PLAN_API_KEY 或用 --key 传入。')
+          process.exit(1)
+        }
+        if (!hasModelOverride) {
+          const customModel = await prompt(rl, `模型名 [${model}]: `, model)
+          model = customModel
+        }
+      } finally {
+        rl.close()
       }
-    } finally {
-      rl.close()
     }
-  } else if (!apiKey) {
-    console.error('未提供 API Key。可设环境变量 CODING_PLAN_API_KEY 或用 --key 传入。')
-    process.exit(1)
   }
 
   if (providerName === 'aliyun' && !apiKey.startsWith('sk-sp-')) {
