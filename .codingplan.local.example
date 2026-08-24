@@ -1,0 +1,6 @@
+# 复制为 .codingplan.local 后填入真实 Key（该文件已 gitignore，勿提交）
+# cp .codingplan.local.example .codingplan.local
+
+CODING_PLAN_API_KEY=sk-sp-YOUR_CODING_PLAN_KEY
+CODING_PLAN_PROVIDER=aliyun
+CODING_PLAN_MODEL=qwen3.7-plus

@@ -18,6 +18,7 @@
     "cap:sync": "npx cap sync",
     "setup:supabase": "bash scripts/setup-supabase.sh",
     "setup:env": "node scripts/write-env.mjs",
+    "setup:claude-codingplan": "node scripts/setup-claude-codingplan.mjs",
     "verify:sync": "node scripts/verify-sync.mjs"
   },
   "dependencies": {
