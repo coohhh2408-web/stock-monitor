@@ -1,7 +1,9 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import { SettingsPanel } from '@/components/SettingsPanel'
 import { ShareViewPage } from '@/components/ShareViewPage'
+import { ResearchRoundtableHost } from '@/components/ResearchRoundtableHost'
 import { parseShareRoute, type ShareRoute } from '@/services/shareService'
+import { parseAppRoute, type AppRoute } from '@/lib/appRoute'
 import { TabBar } from '@/components/layout/TabBar'
 import { DesktopTabBar } from '@/components/layout/DesktopTabBar'
 import { MarketDashboard } from '@/components/MarketDashboard/MarketDashboard'
@@ -13,6 +15,16 @@ import { useIsMobileLayout } from '@/hooks/useIsMobileLayout'
 import { sessionLabel } from '@/lib/marketHours'
 import { lightTap } from '@/lib/nativeInit'
 import type { AppTab } from '@/types/features'
+
+function readAppRoute(): AppRoute {
+  return parseAppRoute(window.location.search, window.location.hash)
+}
+
+function writeAppLocation(tab: AppTab, searchParams: URLSearchParams) {
+  const search = searchParams.toString()
+  const next = `${window.location.pathname}${search ? `?${search}` : ''}#${tab}`
+  window.history.replaceState(null, '', next)
+}
 
 function useStatusClock() {
   const [time, setTime] = useState(() =>
@@ -52,20 +64,40 @@ function SquareIconButton({
 }
 
 function AppShell() {
-  const [activeTab, setActiveTab] = useState<AppTab>(() => {
-    if (typeof window === 'undefined') return 'market'
-    const h = window.location.hash.replace(/^#\/?/, '')
-    if (h === 'push' || h === 'demo-alert') return 'alert'
-    return h === 'alert' || h === 'position' || h === 'market' || h === 'screener' ? h : 'market'
-  })
+  const [route, setRoute] = useState<AppRoute>(() =>
+    typeof window === 'undefined' ? { tab: 'market', research: false, code: null, demoPush: false } : readAppRoute(),
+  )
+  const [activeTab, setActiveTab] = useState<AppTab>(route.tab)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { settings, setSettings, resetAllData, refreshQuotes, quotes, quoteFeed, lastRefreshedAt, cloudSync, setCloudSyncConfig, generateSyncRoom, syncNow } = useAppStore()
   const isMobile = useIsMobileLayout()
   const statusTime = useStatusClock()
 
+  useEffect(() => {
+    const sync = () => {
+      const next = readAppRoute()
+      setRoute(next)
+      setActiveTab(next.tab)
+    }
+    window.addEventListener('hashchange', sync)
+    window.addEventListener('popstate', sync)
+    return () => {
+      window.removeEventListener('hashchange', sync)
+      window.removeEventListener('popstate', sync)
+    }
+  }, [])
+
   const selectTab = (tab: AppTab) => {
     setActiveTab(tab)
-    window.history.replaceState(null, '', `#${tab}`)
+    const params = new URLSearchParams(window.location.search)
+    params.delete('open')
+    params.delete('code')
+    writeAppLocation(tab, params)
+    setRoute(parseAppRoute(params.toString() ? `?${params}` : '', `#${tab}`))
+  }
+
+  const closeResearch = () => {
+    selectTab('screener')
   }
 
   const statusText = quoteFeed.status === 'error'
@@ -159,6 +191,14 @@ function AppShell() {
       </main>
 
       {isMobile && <TabBar active={activeTab} onChange={selectTab} />}
+
+      {route.research && (
+        <ResearchRoundtableHost
+          code={route.code}
+          isMobile={isMobile}
+          onClose={closeResearch}
+        />
+      )}
 
       <SettingsPanel
         isOpen={settingsOpen}

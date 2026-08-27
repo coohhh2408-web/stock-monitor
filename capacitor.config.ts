@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 /**
  * iOS 是薄壳：产品功能在 React 里改，不要在 Swift 里复制页面。
- * Web 还没定型时，用 CAP_SERVER_URL 让模拟器直接加载 Vite，避免每次改清单都重编原生。
+ * 用 CAP_SERVER_URL 让模拟器直接加载 Vite；圆桌入口带 ?open=research，不要手改 Xcode。
  */
 const liveUrl = process.env.CAP_SERVER_URL?.trim()
 

@@ -1,12 +1,16 @@
 #!/usr/bin/env node
 /**
- * 在 Mac 本机：必要时启动 Vite，sync 热加载地址，然后 cap run 打开模拟器。
- * Linux / 云环境没有 Xcode，只打印说明。
+ * 本机一条命令：必要时自己起 Vite，sync 热加载地址，再 cap run。
+ * 不要再开第二个终端，也不要再把 IP / 地址搬到 Xcode。
+ * Linux / 云环境没有 Xcode，只打印本机要跑的那一条。
  */
 import os from 'node:os'
 import { spawn, execFileSync } from 'node:child_process'
 
 const DEVICE = process.argv.includes('--device')
+const RESEARCH = process.argv.includes('--research')
+const PAGES = process.argv.includes('--pages')
+const WEB_PAGES_URL = 'https://coohhh2408-web.github.io/stock-monitor/'
 
 function lanIPv4() {
   const ifs = os.networkInterfaces()
@@ -81,44 +85,89 @@ function bootedIPhoneTarget() {
   }
 }
 
-const macHelp = `
-请在 Mac 上用 Cursor 打开本仓库：
+function connectedDeviceTarget() {
+  let text = ''
+  try {
+    text = execFileSync('xcrun', ['xctrace', 'list', 'devices'], { encoding: 'utf8' })
+  } catch (err) {
+    text = `${err.stdout ?? ''}${err.stderr ?? ''}${err.message ?? ''}`
+  }
+  const section = text.split('== Simulators ==')[0] ?? text
+  for (const line of section.split('\n')) {
+    if (!/iphone/i.test(line) || /simulator/i.test(line)) continue
+    const groups = [...line.matchAll(/\(([^)]+)\)/g)].map((m) => m[1])
+    const udid = groups.at(-1)
+    if (udid && !/^\d+\.\d+/.test(udid)) return udid
+  }
+  return null
+}
 
-  git pull && npm install
-  npm run ios:local
-`.trim()
+function withOpenQuery(base) {
+  const url = new URL(base.endsWith('/') ? base : `${base}/`)
+  if (RESEARCH) {
+    url.searchParams.set('open', 'research')
+  }
+  return url.toString()
+}
+
+const macCmd = DEVICE
+  ? 'git pull && npm install && npm run ios:device -- --research'
+  : 'git pull && npm install && npm run ios:research'
 
 if (process.platform !== 'darwin') {
-  console.log(`当前系统是 ${process.platform}，没有 Xcode，不能在这里点 Run。\n`)
-  console.log(macHelp)
+  console.log(`当前系统是 ${process.platform}，没有 Xcode。\n`)
+  console.log('本机一条命令：')
+  console.log(`  ${macCmd}`)
   process.exit(1)
 }
 
-const host = DEVICE ? lanIPv4() : '127.0.0.1'
-if (DEVICE && !host) {
-  console.error('找不到局域网 IP。连上 Wi-Fi 后再试。')
-  process.exit(1)
-}
-
-const url = `http://${host}:5173`
-const probes = DEVICE ? [url, 'http://127.0.0.1:5173'] : ['http://127.0.0.1:5173']
-
-if (!(await waitForVite(probes, 2000))) {
-  console.log('没检测到 Vite，正在后台启动 npm run dev …')
-  startVite()
-  if (!(await waitForVite(probes))) {
-    console.error('Vite 没起来。请手动开一个终端运行 npm run dev 后再试。')
+let origin
+if (PAGES) {
+  origin = WEB_PAGES_URL
+} else if (DEVICE) {
+  const host = lanIPv4()
+  if (!host) {
+    console.error('找不到局域网 IP。连上 Wi-Fi 后再跑：')
+    console.error(`  ${macCmd}`)
     process.exit(1)
+  }
+  origin = `http://${host}:5173/`
+} else {
+  origin = 'http://127.0.0.1:5173/'
+}
+
+const url = withOpenQuery(origin)
+const probes = PAGES
+  ? []
+  : DEVICE
+    ? [origin, 'http://127.0.0.1:5173/']
+    : ['http://127.0.0.1:5173/']
+
+if (!PAGES) {
+  if (!(await waitForVite(probes, 2000))) {
+    console.log('没检测到 Vite，正在后台启动 npm run dev …')
+    startVite()
+    if (!(await waitForVite(probes))) {
+      console.error('Vite 没起来。本机再跑这一条（不要另开窗口搬地址）：')
+      console.error(`  ${macCmd}`)
+      process.exit(1)
+    }
   }
 }
 
-console.log(DEVICE ? `真机热加载 → ${url}` : `模拟器热加载 → ${url}`)
+console.log(DEVICE ? `真机热加载 → ${url}` : PAGES ? `正式站 → ${url}` : `模拟器热加载 → ${url}`)
 console.log('正在 cap sync …')
 await run('npx', ['cap', 'sync', 'ios'], { CAP_SERVER_URL: url })
 
 if (DEVICE) {
-  await run('npx', ['cap', 'open', 'ios'])
-  console.log('\nXcode 顶部选你的 iPhone，点 Run。第一次请允许本地网络。')
+  const target = connectedDeviceTarget()
+  if (!target) {
+    console.error('没看到已连接的 iPhone。插上解锁后只跑这一条：')
+    console.error(`  ${macCmd}`)
+    process.exit(1)
+  }
+  console.log(`正在装到真机 ${target}（cap run，不打开 Xcode）…`)
+  await run('npx', ['cap', 'run', 'ios', '--no-sync', '--target', target])
   process.exit(0)
 }
 
