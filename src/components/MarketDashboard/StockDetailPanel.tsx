@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { SentimentTag } from '@/components/ui/StocksPrimitives'
 import { KlineChart } from '@/components/ui/KlineChart'
 import { QuoteStatsGrid } from './QuoteStatsGrid'
@@ -27,6 +27,7 @@ interface StockDetailPanelProps {
   onClose: () => void
   isMobile?: boolean
   pick?: ScreenerPick | null
+  forceResearch?: boolean
 }
 
 export function StockDetailPanel({
@@ -35,6 +36,7 @@ export function StockDetailPanel({
   onClose,
   isMobile = false,
   pick = null,
+  forceResearch = false,
 }: StockDetailPanelProps) {
   const [selectedNews, setSelectedNews] = useState<AnnouncementItem | null>(null)
   const [visible, setVisible] = useState(false)
@@ -46,6 +48,7 @@ export function StockDetailPanel({
   const [chartLoading, setChartLoading] = useState(false)
   const [financials, setFinancials] = useState<FinancialsPack | null>(null)
   const [financialsStatus, setFinancialsStatus] = useState<'loading' | 'ready' | 'empty'>('empty')
+  const roundtableRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -153,6 +156,14 @@ export function StockDetailPanel({
     return () => document.removeEventListener('keydown', handler)
   }, [visible, selectedNews, onClose])
 
+  useEffect(() => {
+    if (!isOpen || !forceResearch || !visible) return
+    const id = window.setTimeout(() => {
+      roundtableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 280)
+    return () => window.clearTimeout(id)
+  }, [isOpen, forceResearch, visible, stock?.code])
+
   if (!visible || !stock) return null
 
   const display = snapshot
@@ -241,8 +252,18 @@ export function StockDetailPanel({
           <PricePlanStrip quote={display} variant="panel" />
         </div>
 
-        <h2 className="text-[22px] font-bold tracking-tight text-neutral-900 mb-3 px-0.5">价值清单</h2>
-        <BuffettMungerBrief stock={display} financials={financials} financialsStatus={financialsStatus} pick={pick} />
+        <h2 className="text-[22px] font-bold tracking-tight text-neutral-900 mb-3 px-0.5">
+          {forceResearch ? '三人短评' : '价值清单'}
+        </h2>
+        <div ref={roundtableRef}>
+          <BuffettMungerBrief
+            stock={display}
+            financials={financials}
+            financialsStatus={financialsStatus}
+            pick={pick}
+            forceResearch={forceResearch}
+          />
+        </div>
 
         {newsItems.length > 0 && (
           <Shelf title="快讯" className="mt-5">

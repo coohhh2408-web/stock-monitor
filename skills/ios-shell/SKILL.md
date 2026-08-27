@@ -13,17 +13,19 @@ description: |
 1. **不要**为清单、财报、快讯、持仓、提醒单独写 Swift UI。
 2. **不要**把当前 Web 信息架构焊进 `UITabBarController`。底部 Tab 在 `src/components/layout/TabBar.tsx`。
 3. 新能力先落在 `src/`。只有 Web 做不到的系统能力（推送权限、后台刷新、Keychain）才加 Capacitor 插件。
-4. 日常联调在 **Mac 本机**：终端 1 `npm run dev`，终端 2 `npm run ios:local`（模拟器）或 `npm run ios:device`（真机）。不要在云环境里跑 Xcode。
+4. 日常联调在 **Mac 本机一条命令**：`npm run ios:local` 或 `npm run ios:research`。脚本自己起 Vite、自己 cap sync。不要开第二个终端，不要把 IP 搬进 Xcode。云环境没有 Xcode。
 
-## 两种运行方式
+## 运行方式
 
-| 方式 | 何时 | 命令 |
+| 方式 | 何时 | 本机一条命令 |
 |---|---|---|
-| 热加载（模拟器） | Web 还在改 | Mac：`npm run dev` + `npm run ios:local` |
-| 热加载（真机） | iPhone 同一 Wi-Fi | `npm run dev` + `npm run ios:device` |
+| 热加载（模拟器） | Web 还在改 | `npm run ios:local` |
+| 热加载并打开圆桌 | 核对三人短评 | `npm run ios:research` |
+| 热加载（真机） | iPhone 同一 Wi-Fi | `npm run ios:device -- --research` |
+| 看正式站 | 不想起 Vite | `npm run ios:pages` |
 | 打包进 App | 要看离线包 / 提测 | `npm run ios:build`（不要带 CAP_SERVER_URL） |
 
-`capacitor.config.ts` 读环境变量 `CAP_SERVER_URL`。不要把开发机 IP 写进仓库。
+`capacitor.config.ts` 读环境变量 `CAP_SERVER_URL`。不要把开发机 IP 写进仓库。圆桌入口用查询参数 `?open=research`，不要靠人手改 Xcode 的 URL。
 
 ## 网络
 

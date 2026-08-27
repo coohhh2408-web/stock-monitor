@@ -48,19 +48,17 @@ npm run preview   # 本机核对 http://localhost:4173
 - 选股：按习惯市盈率带过滤，不是荐股池
 - 价值清单：八道关，缺数据标未知
 - `?mobile=1#push`：手机框里预览到来电提醒
+- `?mobile=1#research`：手机框里打开三人短评（默认茅台）
 
 ## 现在请在 Mac 本机看 iOS 壳
 
-云环境没有 Xcode。网页定型后，原生不要再复制功能：
+云环境没有 Xcode。网页定型后，原生不要再复制功能。本机一条命令（会自己起 Vite，不要另开窗口）：
 
 ```bash
-git fetch origin
-git checkout cursor/web-release-6f09
-npm install
-npm run ios:local
+git pull && npm install && npm run ios:research
 ```
 
-真机：`npm run ios:device`。改 `src/` 保存即可在 App 里看到。
+真机同一 Wi-Fi：`npm run ios:device -- --research`。改 `src/` 保存即可在 App 里看到三人短评。
 
 ## 真实行情
 

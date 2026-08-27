@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { cn, formatQuotePrice } from '@/lib/utils'
 import { buildBuffettMungerBrief, inferBusinessKind, stanceLabel, type SageTake, type ValueStance } from '@/services/buffettMunger'
@@ -35,14 +35,22 @@ export function BuffettMungerBrief({
   financials = null,
   financialsStatus = 'empty',
   pick = null,
+  forceResearch = false,
 }: {
   stock: QuoteItem
   financials?: FinancialsPack | null
   financialsStatus?: FinStatus
   pick?: ScreenerPick | null
+  forceResearch?: boolean
 }) {
-  const [view, setView] = useState<SageView>(pick ? 'research' : 'list')
+  const [view, setView] = useState<SageView>(pick || forceResearch ? 'research' : 'list')
   const [research, setResearch] = useState<ResearchView>('prose')
+
+  useEffect(() => {
+    if (!forceResearch) return
+    setView('research')
+    setResearch('prose')
+  }, [forceResearch, stock.code])
   const checklist = buildValueChecklist(stock, financials?.latest)
   const prose = view === 'research' || pick ? buildBuffettMungerBrief(stock) : null
   const skill = view === 'research' ? buildSkillBrief(stock) : null
@@ -50,7 +58,7 @@ export function BuffettMungerBrief({
     view === 'earnings' && financials ? buildEarningsBrief(stock.name, inferBusinessKind(stock), financials) : null
 
   return (
-    <section className="mb-4">
+    <section id="sage-roundtable" className="mb-4 scroll-mt-4">
       {pick && <PickReasonCard pick={pick} stock={stock} />}
 
       <SegmentedControl
